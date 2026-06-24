@@ -12,3 +12,113 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.15.19",
 ]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 110
+indent-width = 8
+
+target-version = "py311"
+
+[tool.ruff.lint]
+# Curated rule set. Each family is justified; we deliberately avoid `ALL`,
+# which pulls in unstable/preview and mutually-conflicting rules.
+select = [
+    "F",    # pyflakes — real bugs (undefined/unused names)
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort — import ordering
+    "N",    # pep8-naming — naming conventions
+    "UP",   # pyupgrade — modernize to target-version syntax
+    "B",    # flake8-bugbear — likely-bug patterns (e.g. mutable defaults)
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "PT",   # flake8-pytest-style
+    "TID",  # flake8-tidy-imports — boundary guardrails
+    "ANN",  # flake8-annotations — require type annotations
+    "RUF",  # ruff-specific rules
+]
+ignore = []
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Tests don't need full type-annotation coverage.
+[tool.ruff.lint.per-file-ignores]
+"src/tests/**/*.py" = ["ANN"]
+
+[tool.ruff.lint.isort]
+# Group your own package separately from third-party imports.
+known-first-party = ["advanced_agent"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Forbid reaching across/up the tree via relative parent imports
+# (`from ..x import y`) — a common way layering boundaries leak.
+# Sibling imports (`from .x import y`) stay allowed.
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.flake8-annotations]
+# Don't force a redundant `-> None` on __init__; honor dummy-arg naming.
+mypy-init-return = true
+suppress-dummy-args = true
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# indent with spaces.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = true
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"

@@ -1,6 +1,6 @@
-def main():
-    print("Hello from advanced-agent!")
+def main() -> None:
+        print("Hello from advanced-agent!")
 
 
 if __name__ == "__main__":
-    main()
+        main()
