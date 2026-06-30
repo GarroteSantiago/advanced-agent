@@ -1,5 +1,74 @@
+"""Entry point: launch the interactive coding-agent chat.
+
+Wires the console I/O adapters, the LLM provider (OpenAI when OPENAI_API_KEY is
+set, else a placeholder), and the optional guardrails config, then runs the chat.
+"""
+
+import asyncio
+import os
+from pathlib import Path
+
+from agent.cli import build_session, run_chat
+from agent.interaction import ConsoleInputer, ConsoleRenderer, Renderer
+from harness.tools import PolicyConfig
+from llm import ChatModel
+from llm.providers import OpenAIChatModel, PlaceholderChatModel
+
+
+def _load_dotenv(path: str = ".env") -> None:
+        file = Path(path)
+        if not file.exists():
+                return
+        for raw in file.read_text(encoding="utf-8").splitlines():
+                entry = raw.strip()
+                if not entry or entry.startswith("#") or "=" not in entry:
+                        continue
+                key, _, value = entry.partition("=")
+                os.environ.setdefault(key.strip(), value.strip())
+
+
+def _load_policy(path: str = "agent.config.toml") -> PolicyConfig | None:
+        file = Path(path)
+        return PolicyConfig.from_toml(file) if file.exists() else None
+
+
+def _build_model(renderer: Renderer) -> ChatModel:
+        if os.environ.get("OPENAI_API_KEY"):
+                model_name = os.environ.get("MODEL", "gpt-5-nano")
+                renderer.show(f"using OpenAI model: {model_name}")
+                return OpenAIChatModel(model=model_name)
+        renderer.show(
+                "WARNING: no OPENAI_API_KEY set; using a placeholder model. "
+                "Set it in .env for real tasks."
+        )
+        return PlaceholderChatModel()
+
+
+async def _main() -> None:
+        _load_dotenv()
+        renderer = ConsoleRenderer()
+        inputer = ConsoleInputer()
+
+        policy = _load_policy()
+        if policy is not None:
+                renderer.show("loaded guardrails from agent.config.toml")
+
+        model = _build_model(renderer)
+        session, supervision, plan_mode, progress = build_session(
+                model, renderer=renderer, inputer=inputer, policy=policy
+        )
+        await run_chat(
+                session,
+                supervision=supervision,
+                plan_mode=plan_mode,
+                progress=progress,
+                renderer=renderer,
+                inputer=inputer,
+        )
+
+
 def main() -> None:
-        print("Hello from advanced-agent!")
+        asyncio.run(_main())
 
 
 if __name__ == "__main__":
