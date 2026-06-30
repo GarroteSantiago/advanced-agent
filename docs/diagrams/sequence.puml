@@ -1,0 +1,73 @@
+@startuml sequence
+title Advanced Agent — One ReAct turn (uses a tool, then answers)
+
+skinparam responseMessageBelowArrow true
+
+actor User
+participant "run_chat (CLI)" as CLI
+participant Session
+participant AgentLoop
+participant Navigator
+participant ReasonPhase
+participant ChatModel
+participant ActionPhase
+participant ToolExecutor
+participant Approver
+participant "ToolInterface" as Tool
+participant ObservationPhase
+participant Controller
+participant EventBus
+participant ProgressView
+
+User -> CLI : "count the .py files"
+CLI -> Session : ask(message)
+Session -> Session : conversation += user message
+Session -> AgentLoop : run(context)
+
+== Reason (model asks for a tool) ==
+AgentLoop -> ReasonPhase : run(context)
+ReasonPhase -> EventBus : publish(ModelCalled)
+EventBus -> ProgressView : handle -> "· thinking…"
+ReasonPhase -> ChatModel : complete(conversation, tools)
+ChatModel --> ReasonPhase : Completion(tool_calls)
+ReasonPhase --> AgentLoop : PhaseResult(ctx, TOOLS_REQUESTED)
+AgentLoop -> Navigator : next(reason, TOOLS_REQUESTED)
+Navigator --> AgentLoop : Continue(action)
+
+== Action (run the tool, gated) ==
+AgentLoop -> ActionPhase : run(context)
+ActionPhase -> ToolExecutor : execute(toolCall)
+ToolExecutor -> EventBus : publish(ToolInvoked)
+EventBus -> ProgressView : handle -> "→ run_command(...)"
+ToolExecutor -> Approver : review(request, mutating)
+Approver --> ToolExecutor : Approval.allow()
+ToolExecutor -> Tool : invoke(request)
+Tool --> ToolExecutor : ToolResult
+ToolExecutor -> EventBus : publish(ToolObserved)
+ToolExecutor --> ActionPhase : ToolResult
+ActionPhase --> AgentLoop : PhaseResult(ctx, ACTED)
+AgentLoop -> Navigator : next(action, ACTED)
+Navigator --> AgentLoop : Continue(observation)
+
+== Observe (fold result, may we continue?) ==
+AgentLoop -> ObservationPhase : run(context)
+ObservationPhase -> ObservationPhase : observed() — fold result into conversation
+ObservationPhase -> Controller : permit(context)
+Controller --> ObservationPhase : Decision.allow()
+ObservationPhase --> AgentLoop : PhaseResult(ctx, CONTINUE)
+AgentLoop -> Navigator : next(observation, CONTINUE)
+Navigator --> AgentLoop : Continue(reason)
+
+== Reason (model answers) ==
+AgentLoop -> ReasonPhase : run(context)
+ReasonPhase -> ChatModel : complete(conversation)
+ChatModel --> ReasonPhase : Completion(content="23")
+ReasonPhase --> AgentLoop : PhaseResult(ctx.stopped, ANSWERED)
+AgentLoop -> Navigator : next(reason, ANSWERED)
+Navigator --> AgentLoop : Halt
+AgentLoop -> EventBus : publish(LoopStopped)
+AgentLoop --> Session : ExecutionResult
+Session --> CLI : ExecutionResult
+CLI -> User : "agent> 23   [2 iteration(s)]"
+
+@enduml

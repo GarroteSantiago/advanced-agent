@@ -1,0 +1,59 @@
+@startuml runtime-collaboration
+title Advanced Agent — Runtime Collaboration (messages during one turn)
+
+skinparam linetype ortho
+hide empty members
+
+legend left
+  Arrows are messages sent at runtime (not ownership).
+  The context is immutable: phases return a *new* context.
+endlegend
+
+class Session
+class AgentLoop
+class Navigator
+class "AgentExecutionContext" as Context
+class ReasonPhase
+class ActionPhase
+class ObservationPhase
+interface ChatModel
+class ToolExecutor
+interface Approver
+interface ToolInterface
+class Controller
+class EventBus
+class ProgressView
+interface Renderer
+
+' driving the loop
+Session --> AgentLoop : run(context)
+AgentLoop --> ReasonPhase : run(context)
+AgentLoop --> ActionPhase : run(context)
+AgentLoop --> ObservationPhase : run(context)
+AgentLoop --> Navigator : next(phase, outcome)
+note right of Navigator
+  returns Continue(nextPhase)
+  or Halt (end the run)
+end note
+
+' what each phase does
+ReasonPhase --> ChatModel : complete(conversation, tools)
+ReasonPhase --> Context : with_assistant(completion)
+ActionPhase --> ToolExecutor : execute(toolCall)
+ActionPhase --> Context : with_tool_results(results)
+ObservationPhase --> Context : observed()
+ObservationPhase --> Controller : permit(context)
+
+' tool execution chokepoint
+ToolExecutor --> Approver : review(request, mutating)
+ToolExecutor --> ToolInterface : invoke(request)
+
+' observability flows one way, off the bus
+ReasonPhase ..> EventBus : publish(ModelCalled)
+ToolExecutor ..> EventBus : publish(ToolInvoked / ToolObserved)
+ObservationPhase ..> EventBus : publish(CycleCompleted / GuardTripped)
+AgentLoop ..> EventBus : publish(PhaseStarted / LoopStopped)
+EventBus ..> ProgressView : handle(event)
+ProgressView ..> Renderer : show(text)
+
+@enduml
