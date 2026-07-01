@@ -1,0 +1,93 @@
+@startuml ownership
+title Advanced Agent — Ownership (who constructs / owns what)
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+legend left
+  *-- owns (composition)
+  o-- holds (injected dependency)
+  ..> creates (per request)
+endlegend
+
+class "main.py" as Main <<composition root>>
+
+package "agent" {
+        class Session
+        class PlanMode
+        class ProgressView
+        class ConsoleRenderer
+        class ConsoleInputer
+}
+
+package "harness.loop" {
+        class AgentLoop
+        class Navigator
+        class ReasonPhase
+        class ActionPhase
+        class ObservationPhase
+}
+
+package "harness.runtime" {
+        class AgentExecutionContext
+}
+
+package "harness.tools" {
+        class ToolRegistry
+        class ToolExecutor
+        interface ToolInterface
+        interface Approver
+        class SupervisionPolicy
+}
+
+package "harness.control" {
+        class Controller
+}
+
+package "harness.events" {
+        class EventBus
+        interface EventHandler
+}
+
+package "llm" {
+        interface ChatModel
+}
+
+' --- composition root ---
+Main *-- ConsoleRenderer
+Main *-- ConsoleInputer
+Main o-- ChatModel : provider (OpenAI / placeholder)
+Main ..> Session : build_session()
+Main *-- ProgressView
+
+' --- the agent session owns the long-lived collaborators ---
+Session *-- EventBus
+Session *-- ToolRegistry
+Session *-- Controller
+Session o-- ChatModel
+Session o-- Approver
+Session o-- PlanMode
+Session ..> AgentExecutionContext : new per ask()
+Session ..> AgentLoop : build_agent_loop() per ask()
+
+SupervisionPolicy ..|> Approver
+ToolRegistry o-- "*" ToolInterface
+EventBus o-- "*" EventHandler
+ProgressView ..|> EventHandler
+
+' --- the loop owns the graph; phases own their collaborators ---
+AgentLoop *-- Navigator
+Navigator o-- ReasonPhase
+Navigator o-- ActionPhase
+Navigator o-- ObservationPhase
+
+ReasonPhase o-- ChatModel
+ActionPhase o-- ToolExecutor
+ObservationPhase o-- Controller
+
+ToolExecutor o-- ToolRegistry
+ToolExecutor o-- Approver
+ToolExecutor o-- EventBus
+
+@enduml

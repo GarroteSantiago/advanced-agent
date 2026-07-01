@@ -1,0 +1,25 @@
+# advanced-agent — guardrails configuration (sample)
+#
+# Copy to `agent.config.toml` to activate. The harness validates every tool call
+# against these rules before executing it. Rules fail closed.
+#
+# Matching: paths use fnmatch globs (`*` spans separators); commands match by
+# substring. These are guardrails, not a sandbox.
+
+# Confine all file operations to this directory (paths outside are denied).
+# Comment out to allow operating anywhere.
+workspace = "."
+
+[permissions.read]
+# Globs the agent may never read.
+deny = [".env", "secrets/**", "**/*.pem"]
+
+[permissions.write]
+# Globs the agent may never modify.
+deny = [".github/**", "uv.lock", "**/*.lock"]
+
+[commands]
+# Commands forbidden outright.
+deny = ["rm -rf", "git push", "sudo"]
+# Commands that always require user confirmation (even if supervision is off).
+require_approval = ["pip install", "uv add", "git commit"]
