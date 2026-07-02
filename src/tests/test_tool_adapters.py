@@ -59,6 +59,15 @@ async def test_write_file_replaces_content(tmp_path):
         assert target.read_text(encoding="utf-8") == "new body"
 
 
+async def test_write_file_creates_missing_parent_directories(tmp_path):
+        target = tmp_path / "new" / "sub" / "out.txt"
+        result = await WriteFileTool().invoke(
+                _request("write_file", path=str(target), content="hi")
+        )
+        assert result.ok
+        assert target.read_text(encoding="utf-8") == "hi"
+
+
 async def test_write_file_reports_the_path_it_modified(tmp_path):
         target = tmp_path / "out.txt"
         result = await WriteFileTool().invoke(

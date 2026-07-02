@@ -8,16 +8,25 @@ mutating tool (the Tester's ``run_command``) is gated by the same policy.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from agent.rag_tool import RagSearchTool, RetrievalLog
 from agent.subagent import Subagent
 from harness.delegation import SubagentRegistry
 from harness.events import EventBus
-from harness.tools import Approver, ToolInterface
+from harness.tools import (
+        Approver,
+        CompositeApprover,
+        PolicyConfig,
+        PolicyVerifier,
+        ToolInterface,
+)
 from harness.tools.adapters import (
         ListFilesTool,
         ReadFileTool,
         RunCommandTool,
         WebSearchTool,
+        WriteFileTool,
 )
 from llm import ChatModel
 from prompts import (
@@ -25,15 +34,31 @@ from prompts import (
         IMPLEMENTER_PROMPT,
         RESEARCHER_PROMPT,
         REVIEWER_PROMPT,
+        SCRIBE_PROMPT,
         TESTER_PROMPT,
 )
 from rag import Retriever
+
+_DEFAULT_DOCS_DIR = Path("docs/analysis")
+
+
+def _scribe_approver(docs_dir: Path, base: Approver | None) -> Approver:
+        """Confine the Scribe's writes to ``docs_dir`` (fail-closed), then defer to
+        whatever approver the rest of the team uses. First deny wins, so a write
+        outside the documentation folder is refused before any other check runs.
+        """
+        confinement = PolicyVerifier(PolicyConfig(workspace=docs_dir))
+        chain: list[Approver] = [confinement]
+        if base is not None:
+                chain.append(base)
+        return CompositeApprover(chain)
 
 
 def build_subagents(
         model: ChatModel,
         approver: Approver | None = None,
         retriever: Retriever | None = None,
+        docs_dir: Path = _DEFAULT_DOCS_DIR,
 ) -> SubagentRegistry:
         # The Researcher gets rag_search (RAG-first) when a retriever is available,
         # always with web_search as fallback. Its RetrievalLog + bus carry retrieved
@@ -97,6 +122,21 @@ def build_subagents(
                                 tools=[ReadFileTool()],
                                 approver=approver,
                                 task_description="What to review and against which request.",
+                        ),
+                        Subagent(
+                                name="scribe",
+                                description=(
+                                        "The only writer: document the collected findings into the "
+                                        "docs folder, one file per agent."
+                                ),
+                                system_prompt=f"{SCRIBE_PROMPT}\n\nThe documentation folder is: {docs_dir}",
+                                model=model,
+                                tools=[WriteFileTool(), ListFilesTool()],
+                                approver=_scribe_approver(docs_dir, approver),
+                                task_description=(
+                                        "The findings to document; include each agent's results so "
+                                        "one file per agent can be written."
+                                ),
                         ),
                 ]
         )

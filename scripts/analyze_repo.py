@@ -176,12 +176,14 @@ async def _run(target: str) -> None:
         project_id = str(Path(target).resolve())
         recalled = store.load(project_id)
 
+        docs_dir = Path(os.environ.get("DOCS_DIR", "docs/analysis"))
         session, _supervision, _plan, _progress = build_session(
                 model,
                 renderer=renderer,
                 inputer=_SilentInputer(),
                 retriever=retriever,
                 memory_briefing=recalled.brief(),
+                docs_dir=docs_dir,
         )
 
         audit = AuditLogger()

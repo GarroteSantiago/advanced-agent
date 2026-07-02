@@ -119,6 +119,7 @@ async def _main() -> None:
                 policy=policy,
                 retriever=retriever,
                 memory_briefing=briefing,
+                docs_dir=Path(os.environ.get("DOCS_DIR", "docs/analysis")),
         )
         _enable_observability(session, renderer)
 

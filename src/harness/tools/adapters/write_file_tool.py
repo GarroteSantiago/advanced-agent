@@ -42,7 +42,9 @@ class WriteFileTool:
                                 error="write_file requires string 'path' and 'content' arguments",
                         )
                 try:
-                        Path(path).write_text(content, encoding="utf-8")
+                        target = Path(path)
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_text(content, encoding="utf-8")
                 except OSError as error:
                         return ToolResult.failure(
                                 call_id=request.call_id, tool_name=self.name, error=str(error)
