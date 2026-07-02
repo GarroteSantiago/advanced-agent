@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 from agent.rag_tool import RetrievalLog
+from agent.synthesis import PartialSynthesizer
 from harness.assembly import build_agent_loop
 from harness.control import Controller, IterationLimiter
 from harness.delegation import SubagentReport
@@ -48,13 +49,15 @@ class Subagent:
                 for tool in tools:
                         registry.register(tool)
                 controller = Controller([IterationLimiter(max_iterations)])
+                bus = event_bus or EventBus()
                 self._loop = build_agent_loop(
                         model=model,
                         registry=registry,
                         controller=controller,
-                        event_bus=event_bus or EventBus(),
+                        event_bus=bus,
                         approver=approver,
                 )
+                self._synthesizer = PartialSynthesizer(model, bus)
 
         @property
         def name(self) -> str:
@@ -86,12 +89,16 @@ class Subagent:
                 result = await self._loop.run(context)
 
                 sources = self._retrieval_log.drain() if self._retrieval_log is not None else ()
-                output = result.final_output or ""
                 if result.succeeded():
-                        return SubagentReport(agent=self._name, output=output, sources=sources)
+                        return SubagentReport(
+                                agent=self._name, output=result.final_output or "", sources=sources
+                        )
+
+                # Halted without a final answer: recover partial findings rather than
+                # handing back only the (useless-to-the-principal) stop reason.
+                reason = result.stop_reason or "subagent did not complete"
+                summary = await self._synthesizer.summarize(result.conversation)
+                output = f"[partial -- {reason}] {summary}" if summary else reason
                 return SubagentReport(
-                        agent=self._name,
-                        output=output or (result.stop_reason or "subagent did not complete"),
-                        succeeded=False,
-                        sources=sources,
+                        agent=self._name, output=output, succeeded=False, sources=sources
                 )

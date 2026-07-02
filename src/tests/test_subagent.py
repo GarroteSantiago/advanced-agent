@@ -76,10 +76,14 @@ async def test_principal_delegates_then_synthesizes_and_merges_the_ledger() -> N
         assert result.ledger.original_request() == "analyze the repo"
 
 
-async def test_failed_subagent_reports_failure() -> None:
-        # A subagent whose loop is capped before answering fails gracefully.
+async def test_capped_subagent_returns_partial_findings_not_just_the_halt_reason() -> None:
+        # A subagent capped before answering should still hand back what it found
+        # (via a forced synthesis turn), plus why the report is partial.
         model = FakeChatModel(
-                [Completion(tool_calls=(ToolCall(id="c1", name="echo", arguments={"text": "x"}),))]
+                [
+                        Completion(tool_calls=(ToolCall(id="c1", name="echo", arguments={"text": "x"}),)),
+                        Completion(content="I ran echo once but could not finish the checks."),
+                ]
         )
         tester = Subagent(
                 name="test",
@@ -93,3 +97,5 @@ async def test_failed_subagent_reports_failure() -> None:
         report = await tester.delegate("run the suite")
 
         assert report.succeeded is False
+        assert "could not finish the checks" in report.output  # synthesized findings
+        assert "iteration cap" in report.output  # and why it is partial
