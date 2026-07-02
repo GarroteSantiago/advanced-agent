@@ -21,6 +21,7 @@ findings to a documentation folder. See [`docs/use-case.md`](docs/use-case.md).
 | [`docs/use-case.md`](docs/use-case.md) | The concrete objective, the team, success criteria. |
 | [`docs/rag-base.md`](docs/rag-base.md) | The RAG corpus, pipeline, and how to build the index. |
 | [`docs/evidence/`](docs/evidence/) | Live-run evidence: executed-task demos + an OpenTelemetry trace. |
+| [`docs/reproduce.md`](docs/reproduce.md) | Step-by-step: regenerate every generated deliverable (index, evidence, trace). |
 | [`docs/reflection.md`](docs/reflection.md) | What worked, what was hard, honest limitations. |
 
 ## Install
