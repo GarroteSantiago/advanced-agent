@@ -125,9 +125,9 @@ Framework-level corpus, **FastAPI** (21 curated docs → 275 chunks). Embeddings
 
 ---
 
-## 6. Observability — ⚠️ BUILT, not yet exercised live
+## 6. Observability — ⚠️ event stream EXERCISED LIVE; Phoenix adapter still un-smoke-tested
 
-Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `OBSERVABILITY=phoenix`; Phoenix/OTel in an optional `observability` extra. Event stream enriched.
+Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `OBSERVABILITY=phoenix`; Phoenix/OTel in an optional `observability` extra. Event stream enriched **and now aggregated across the whole team**: subagents run on their own buses, and an `EventForwarder` bridges each onto the principal bus (tagged with `Event.source`), so a single sink sees the full run. A live analysis recorded 25 model calls, 2 guard stops, 2 documents retrieved, 58k tokens, ~$0.01 across principal + subagents (`scripts/analyze_repo.py` evidence report). The remaining gap is smoke-testing the **Phoenix** sink itself (a nested trace) — now unblocked by the aggregation.
 
 - [ ] ⚠️ Integrate Langfuse/LangSmith/Phoenix/equivalent — **Phoenix adapter implemented + wired**, but **not smoke-tested against a live Phoenix**.
 - [ ] ❌ Used in ≥1 delivered test — no live trace captured yet (pure span-mapping is unit-tested).
