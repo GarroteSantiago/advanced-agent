@@ -15,6 +15,7 @@ from agent.interaction import Inputer, Renderer
 from agent.planning import ApprovePlan, PlanMode, PlanReview, RejectPlan, RevisePlan
 from agent.progress import ProgressView
 from agent.session import Session
+from agent.subagent import Subagent
 from agent.team import build_subagents
 from harness.tools import (
         Approver,
@@ -88,14 +89,23 @@ def build_session(
 
         # The principal is a coordinator: no direct tools, it works by delegating
         # to the subagent team. Give it tools here if you want it to act directly.
+        team = build_subagents(model, approver, retriever)
         session = Session(
                 model,
                 tools=[],
                 approver=approver,
                 plan_mode=plan_mode,
-                subagents=build_subagents(model, approver, retriever),
+                subagents=team,
                 system_prompt=PRINCIPAL_PROMPT,
         )
+
+        # Bridge each subagent's private event stream onto the principal bus, so
+        # audit/observability see the whole run (subagent model calls, retrievals,
+        # nudges, stops), each event tagged with its emitting agent. Bridging is a
+        # Subagent capability, not part of the Delegate port -- narrow to it here.
+        for delegate in team.all():
+                if isinstance(delegate, Subagent):
+                        delegate.forward_events_to(session.events)
 
         progress = ProgressView(renderer)
         session.events.subscribe(progress)

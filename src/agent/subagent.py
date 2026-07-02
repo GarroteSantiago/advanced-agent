@@ -16,7 +16,7 @@ from agent.synthesis import PartialSynthesizer
 from harness.assembly import build_agent_loop
 from harness.control import Controller, IterationLimiter
 from harness.delegation import SubagentReport
-from harness.events import EventBus
+from harness.events import EventBus, EventForwarder
 from harness.runtime import AgentExecutionContext
 from harness.tools import Approver, ToolInterface, ToolRegistry
 from llm import ChatModel, Conversation, Message
@@ -49,15 +49,23 @@ class Subagent:
                 for tool in tools:
                         registry.register(tool)
                 controller = Controller([IterationLimiter(max_iterations)])
-                bus = event_bus or EventBus()
+                self._bus = event_bus or EventBus()
                 self._loop = build_agent_loop(
                         model=model,
                         registry=registry,
                         controller=controller,
-                        event_bus=bus,
+                        event_bus=self._bus,
                         approver=approver,
                 )
-                self._synthesizer = PartialSynthesizer(model, bus)
+                self._synthesizer = PartialSynthesizer(model, self._bus)
+
+        def forward_events_to(self, target: EventBus) -> None:
+                """Bridge this subagent's private event stream onto a target bus.
+
+                Lets the principal (and anything on its bus -- audit, Phoenix) observe
+                the subagent's activity, each event tagged with this subagent's name.
+                """
+                self._bus.subscribe(EventForwarder(target, self._name))
 
         @property
         def name(self) -> str:

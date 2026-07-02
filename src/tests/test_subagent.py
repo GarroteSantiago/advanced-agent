@@ -6,7 +6,7 @@ from agent.subagent import Subagent
 from harness.assembly import build_agent_loop
 from harness.control import Controller, IterationLimiter
 from harness.delegation import SubagentRegistry
-from harness.events import EventBus
+from harness.events import AuditLogger, EventBus, ModelCalled
 from harness.runtime import AgentExecutionContext
 from harness.tools import ToolRegistry
 from harness.tools.adapters import EchoTool
@@ -74,6 +74,27 @@ async def test_principal_delegates_then_synthesizes_and_merges_the_ledger() -> N
         assert [r.agent for r in result.ledger.subagent_results()] == ["explore"]
         assert result.ledger.subagent_results()[0].summary == "found: FastAPI + pytest"
         assert result.ledger.original_request() == "analyze the repo"
+
+
+async def test_subagent_forwards_its_events_to_a_target_bus_tagged_with_its_name() -> None:
+        model = FakeChatModel([Completion(content="done")])
+        explorer = Subagent(
+                name="explore",
+                description="maps the repo",
+                system_prompt="You are the Explorer.",
+                model=model,
+        )
+        principal_bus = EventBus()
+        audit = AuditLogger()
+        principal_bus.subscribe(audit)
+        explorer.forward_events_to(principal_bus)
+
+        await explorer.delegate("map it")
+
+        forwarded = audit.records()
+        assert forwarded, "the subagent's own events should reach the principal bus"
+        assert all(event.source == "explore" for event in forwarded)  # tagged with provenance
+        assert any(isinstance(event, ModelCalled) for event in forwarded)  # incl. its model calls
 
 
 async def test_capped_subagent_returns_partial_findings_not_just_the_halt_reason() -> None:

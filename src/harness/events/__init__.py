@@ -16,6 +16,7 @@ from harness.events.event import (
         ToolInvoked,
         ToolObserved,
 )
+from harness.events.forwarder import EventForwarder
 from harness.events.handler import EventHandler
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
         "DocumentsRetrieved",
         "Event",
         "EventBus",
+        "EventForwarder",
         "EventHandler",
         "GuardTripped",
         "LoopStopped",

@@ -20,9 +20,16 @@ def _now() -> datetime:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Event:
-        """Base class for all harness events."""
+        """Base class for all harness events.
+
+        ``source`` names the agent that emitted the event: empty for the principal,
+        the subagent's name once an ``EventForwarder`` bridges a subagent's private
+        stream onto the principal bus. It is how aggregated observability keeps the
+        provenance a nested trace needs.
+        """
 
         occurred_at: datetime = field(default_factory=_now)
+        source: str = ""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

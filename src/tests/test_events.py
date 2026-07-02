@@ -3,6 +3,7 @@
 from harness.events import (
         AuditLogger,
         EventBus,
+        EventForwarder,
         EventHandler,
         PhaseCompleted,
         PhaseStarted,
@@ -68,3 +69,21 @@ def test_audit_logger_records_in_order_and_view_is_immutable():
 def test_audit_logger_conforms_to_event_handler_port():
         handler: EventHandler = AuditLogger()
         assert isinstance(handler, EventHandler)
+
+
+def test_events_default_to_an_empty_source():
+        assert PhaseStarted(phase="reason").source == ""
+
+
+def test_event_forwarder_republishes_onto_the_target_tagged_with_its_source():
+        source_bus, target_bus = EventBus(), EventBus()
+        audit = AuditLogger()
+        target_bus.subscribe(audit)
+        source_bus.subscribe(EventForwarder(target_bus, "explore"))
+
+        source_bus.publish(PhaseStarted(phase="reason"))
+
+        (forwarded,) = audit.records()
+        assert isinstance(forwarded, PhaseStarted)
+        assert forwarded.phase == "reason"  # payload preserved
+        assert forwarded.source == "explore"  # provenance stamped
