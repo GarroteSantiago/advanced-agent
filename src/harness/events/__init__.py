@@ -4,6 +4,7 @@ from harness.events.audit import AuditLogger
 from harness.events.bus import EventBus, Subscription
 from harness.events.event import (
         CycleCompleted,
+        DocumentsRetrieved,
         Event,
         GuardTripped,
         LoopStopped,
@@ -19,6 +20,7 @@ from harness.events.handler import EventHandler
 __all__ = [
         "AuditLogger",
         "CycleCompleted",
+        "DocumentsRetrieved",
         "Event",
         "EventBus",
         "EventHandler",

@@ -68,6 +68,12 @@ class ToolObserved(Event):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class DocumentsRetrieved(Event):
+        query: str
+        sources: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CycleCompleted(Event):
         iteration: int
 

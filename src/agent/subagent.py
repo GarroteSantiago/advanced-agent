@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
+from agent.rag_tool import RetrievalLog
 from harness.assembly import build_agent_loop
 from harness.control import Controller, IterationLimiter
 from harness.delegation import SubagentReport
@@ -32,6 +33,8 @@ class Subagent:
                 model: ChatModel,
                 tools: Iterable[ToolInterface] = (),
                 approver: Approver | None = None,
+                event_bus: EventBus | None = None,
+                retrieval_log: RetrievalLog | None = None,
                 max_iterations: int = 8,
                 task_description: str = "The task for this subagent to carry out.",
         ) -> None:
@@ -39,6 +42,7 @@ class Subagent:
                 self._description = description
                 self._prompt = system_prompt
                 self._task_description = task_description
+                self._retrieval_log = retrieval_log
 
                 registry = ToolRegistry()
                 for tool in tools:
@@ -48,7 +52,7 @@ class Subagent:
                         model=model,
                         registry=registry,
                         controller=controller,
-                        event_bus=EventBus(),
+                        event_bus=event_bus or EventBus(),
                         approver=approver,
                 )
 
@@ -70,6 +74,9 @@ class Subagent:
                 }
 
         async def delegate(self, task: str) -> SubagentReport:
+                if self._retrieval_log is not None:
+                        self._retrieval_log.drain()  # discard any stale sources before this run
+
                 conversation = (
                         Conversation.empty()
                         .with_message(Message.system(self._prompt))
@@ -78,9 +85,13 @@ class Subagent:
                 context = AgentExecutionContext.for_task(self._name, conversation, request=task)
                 result = await self._loop.run(context)
 
+                sources = self._retrieval_log.drain() if self._retrieval_log is not None else ()
                 output = result.final_output or ""
                 if result.succeeded():
-                        return SubagentReport.completed(self._name, output)
-                return SubagentReport.failed(
-                        self._name, output or (result.stop_reason or "subagent did not complete")
+                        return SubagentReport(agent=self._name, output=output, sources=sources)
+                return SubagentReport(
+                        agent=self._name,
+                        output=output or (result.stop_reason or "subagent did not complete"),
+                        succeeded=False,
+                        sources=sources,
                 )
