@@ -1,5 +1,9 @@
 # Evidence — Observability trace (§9.7)
 
+> For the executed-task demos (§8: RAG, project memory, strategy-change/stop,
+> observability) see [`task-evidence.md`](task-evidence.md). This file covers the
+> observability trace specifically.
+
 `repo-analysis.otel.jsonl` is a real OpenTelemetry trace captured from one live
 run of the principal coordinator analysing `scripts/sample_app` (a small FastAPI
 fixture). Each line is one finished span, exported compactly (one span per line)
