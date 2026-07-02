@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from time import perf_counter
 
+from harness.context import ContextManager
 from harness.events import EventBus, ModelCalled, ModelCompleted
 from harness.loop.phase import Outcome, PhaseResult
 from harness.runtime import AgentExecutionContext
@@ -16,6 +17,10 @@ class ReasonPhase:
 
         Reports ``TOOLS_REQUESTED`` when the model wants tools, or ``ANSWERED``
         (a terminal answer) otherwise -- the navigator decides what each means.
+
+        The ``ContextManager`` projects the full history into the view actually
+        sent to the model (windowing long conversations); the completion is still
+        folded back into the *full* context, so history is never lost.
         """
 
         def __init__(
@@ -23,17 +28,19 @@ class ReasonPhase:
                 model: ChatModel,
                 catalog: ToolCatalog,
                 event_bus: EventBus | None = None,
+                context_manager: ContextManager | None = None,
         ) -> None:
                 self._model = model
                 self._catalog = catalog
                 self._bus = event_bus or EventBus()
+                self._context = context_manager or ContextManager()
 
         @property
         def name(self) -> str:
                 return "reason"
 
         async def run(self, context: AgentExecutionContext) -> PhaseResult:
-                conversation = context.current_conversation()
+                conversation = self._context.prepare(context.current_conversation())
                 schemas = self._catalog.for_model()
                 model = self._model.identifier()
                 self._bus.publish(

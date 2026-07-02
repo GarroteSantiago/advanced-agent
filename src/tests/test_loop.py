@@ -5,6 +5,7 @@ model or network.
 """
 
 from harness.assembly import build_agent_loop
+from harness.context import ContextManager
 from harness.control import Controller, IterationLimiter
 from harness.events import (
         AuditLogger,
@@ -205,6 +206,26 @@ async def test_progress_tracker_nudges_then_stops_a_repeating_model():
                 if m.role is Role.USER and "repeated the same action" in m.content
         ]
         assert len(nudges) == 1
+
+
+async def test_reason_phase_sends_the_windowed_view_not_the_full_history():
+        model = FakeChatModel([Completion(content="ok")])
+        empty_catalog = ToolRegistry().catalog()
+        reason = ReasonPhase(
+                model, empty_catalog, EventBus(), ContextManager(max_messages=10, keep_recent=4)
+        )
+        messages = [Message.system("role"), Message.user("the task")]
+        for i in range(20):
+                messages.append(Message.assistant(f"turn {i}"))
+        context = AgentExecutionContext.for_task("t-1", Conversation.of(messages))
+
+        result = await reason.run(context)
+
+        sent, _ = model.calls[-1]
+        assert len(sent) < len(messages)  # the model saw a windowed view
+        assert sent.messages()[0] == Message.system("role")  # instructions preserved
+        # But the full history is retained on the context (the completion folds in).
+        assert len(result.context.current_conversation()) == len(messages) + 1
 
 
 async def test_step_runs_a_single_phase_and_reports_its_outcome():
