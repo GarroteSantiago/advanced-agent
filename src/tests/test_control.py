@@ -2,9 +2,10 @@
 
 import pytest
 
-from harness.control import Controller, Decision, Guard, IterationLimiter
+from harness.control import Controller, Decision, Guard, IterationLimiter, ProgressTracker
 from harness.runtime import AgentExecutionContext
-from llm import Completion, Conversation, Message
+from harness.tools import ToolResult
+from llm import Completion, Conversation, Message, ToolCall
 
 
 def _context_after(iterations: int) -> AgentExecutionContext:
@@ -61,3 +62,54 @@ def test_controller_returns_first_denial_in_order():
         decision = controller.permit(_context_after(0))
         assert decision.denied()
         assert decision.reason == "blocked"
+
+
+# --- ProgressTracker (no-progress loop detection) ---------------------------
+
+
+def _looped(times: int, *, vary: bool = False) -> AgentExecutionContext:
+        """A context whose last ``times`` cycles each called the same tool.
+
+        With ``vary`` the arguments/result differ per cycle, so the signatures
+        diverge (genuine progress); otherwise every cycle is identical.
+        """
+        context = AgentExecutionContext.for_task("t-1", Conversation.of([Message.user("go")]))
+        for index in range(times):
+                token = str(index) if vary else "x"
+                call = ToolCall(id=f"c{index}", name="search", arguments={"q": token})
+                result = ToolResult.success(call_id=f"c{index}", tool_name="search", content=token)
+                acted = context.with_assistant(Completion(tool_calls=(call,))).with_tool_results([result])
+                context = acted.observed()
+        return context
+
+
+def test_tracker_reports_advancing_with_no_history():
+        assert ProgressTracker().assess(_looped(0)).advancing()
+
+
+def test_tracker_reports_advancing_while_signatures_differ():
+        assert ProgressTracker().assess(_looped(5, vary=True)).advancing()
+
+
+def test_tracker_stalls_on_the_first_repeat_then_stops_on_a_further_one():
+        tracker = ProgressTracker()
+
+        stalling = tracker.assess(_looped(2))
+        assert stalling.stalling()
+        assert not stalling.stalled()
+
+        stalled = tracker.assess(_looped(3))
+        assert stalled.stalled()
+        assert not stalled.stalling()
+
+
+def test_tracker_reason_explains_the_repetition():
+        assessment = ProgressTracker().assess(_looped(3))
+        assert "repeat" in assessment.reason.lower()
+
+
+def test_tracker_rejects_incoherent_thresholds():
+        with pytest.raises(ValueError, match="stall_at"):
+                ProgressTracker(stall_at=1)
+        with pytest.raises(ValueError, match="stop_at"):
+                ProgressTracker(stall_at=3, stop_at=3)
