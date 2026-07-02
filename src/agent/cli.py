@@ -15,6 +15,7 @@ from agent.interaction import Inputer, Renderer
 from agent.planning import ApprovePlan, PlanMode, PlanReview, RejectPlan, RevisePlan
 from agent.progress import ProgressView
 from agent.session import Session
+from agent.team import build_subagents
 from harness.tools import (
         Approver,
         CompositeApprover,
@@ -22,25 +23,13 @@ from harness.tools import (
         PolicyVerifier,
         SupervisionPolicy,
 )
-from harness.tools.adapters import (
-        ListFilesTool,
-        ReadFileTool,
-        RunCommandTool,
-        WebSearchTool,
-        WriteFileTool,
-)
 from harness.tools.request import ToolRequest
 from llm import ChatModel
+from prompts import PRINCIPAL_PROMPT
 
 HELP = (
         "commands: /plan (toggle plan mode), /supervise (toggle supervision), "
         "/verbose (toggle detail), /help, /exit"
-)
-
-SYSTEM_PROMPT = (
-        "You are a coding agent. Use the available tools to inspect and modify the "
-        "project, run commands, and search the web. When the task is done, answer "
-        "without calling tools."
 )
 
 
@@ -81,10 +70,11 @@ def build_session(
         inputer: Inputer,
         policy: PolicyConfig | None = None,
 ) -> tuple[Session, SupervisionPolicy, PlanMode, ProgressView]:
-        """Wire a Session with all five tools, both interactive modes (off), and
-        a live progress view subscribed to the session's events.
+        """Wire the principal coordinator Session with its subagent team, both
+        interactive modes (off), and a live progress view subscribed to events.
 
-        If a ``policy`` is given, its guardrails are checked before supervision.
+        The principal owns no tools; it delegates to the five subagents. If a
+        ``policy`` is given, its guardrails are checked before supervision.
         """
         confirmer = ConsoleConfirmer(inputer)
         supervision = SupervisionPolicy(confirmer)
@@ -94,18 +84,15 @@ def build_session(
         if policy is not None:
                 approver = CompositeApprover([PolicyVerifier(policy, confirmer), supervision])
 
+        # The principal is a coordinator: no direct tools, it works by delegating
+        # to the subagent team. Give it tools here if you want it to act directly.
         session = Session(
                 model,
-                tools=[
-                        ReadFileTool(),
-                        WriteFileTool(),
-                        RunCommandTool(),
-                        ListFilesTool(),
-                        WebSearchTool(),
-                ],
+                tools=[],
                 approver=approver,
                 plan_mode=plan_mode,
-                system_prompt=SYSTEM_PROMPT,
+                subagents=build_subagents(model, approver),
+                system_prompt=PRINCIPAL_PROMPT,
         )
 
         progress = ProgressView(renderer)
