@@ -19,7 +19,7 @@ from harness.tools.registry import (
 )
 from harness.tools.request import ToolRequest
 from harness.tools.result import ToolResult
-from harness.tools.tool import ToolInterface
+from harness.tools.tool import Describable, ToolInterface
 
 __all__ = [
         "Approval",
@@ -27,6 +27,7 @@ __all__ = [
         "AutoApprover",
         "CompositeApprover",
         "Confirmer",
+        "Describable",
         "DuplicateToolError",
         "PolicyConfig",
         "PolicyVerifier",

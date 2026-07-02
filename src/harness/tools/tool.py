@@ -16,8 +16,12 @@ from harness.tools.result import ToolResult
 
 
 @runtime_checkable
-class ToolInterface(Protocol):
-        """A named, self-describing, invokable capability."""
+class Describable(Protocol):
+        """Anything the model can be told about: a name, a description, a schema.
+
+        Both tools and subagents are ``Describable``, so a single ``ToolCatalog``
+        can render either into a schema the model reasons over.
+        """
 
         @property
         def name(self) -> str: ...
@@ -25,12 +29,17 @@ class ToolInterface(Protocol):
         @property
         def description(self) -> str: ...
 
+        def parameters(self) -> Mapping[str, object]: ...
+
+
+@runtime_checkable
+class ToolInterface(Describable, Protocol):
+        """A named, self-describing, invokable capability."""
+
         @property
         def mutates(self) -> bool:
                 """Whether invoking this tool changes the world. Read-only tools
                 run freely; mutating tools are what supervision gates."""
                 ...
-
-        def parameters(self) -> Mapping[str, object]: ...
 
         async def invoke(self, request: ToolRequest) -> ToolResult: ...
