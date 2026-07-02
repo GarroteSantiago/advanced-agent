@@ -9,6 +9,14 @@ dependencies = [
     "tavily-python>=0.5.0",
 ]
 
+[project.optional-dependencies]
+# Observability adapter (Track B). Kept out of the core install so the harness
+# stays openai+tavily; enable with `uv sync --extra observability`.
+observability = [
+    "arize-phoenix>=4.0",
+    "opentelemetry-sdk>=1.20",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -21,6 +29,7 @@ packages = [
     "src/agent",
     "src/llm",
     "src/memory",
+    "src/observability",
     "src/prompts",
     "src/common",
 ]

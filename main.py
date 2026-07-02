@@ -8,6 +8,7 @@ import asyncio
 import os
 from pathlib import Path
 
+from agent import Session
 from agent.cli import build_session, run_chat
 from agent.interaction import ConsoleInputer, ConsoleRenderer, Renderer
 from harness.tools import PolicyConfig
@@ -30,6 +31,27 @@ def _load_dotenv(path: str = ".env") -> None:
 def _load_policy(path: str = "agent.config.toml") -> PolicyConfig | None:
         file = Path(path)
         return PolicyConfig.from_toml(file) if file.exists() else None
+
+
+def _enable_observability(session: Session, renderer: Renderer) -> None:
+        """Subscribe the Phoenix tracer when OBSERVABILITY=phoenix.
+
+        Opt-in and best-effort: if the extra is not installed we warn and carry
+        on rather than crashing the CLI.
+        """
+        if os.environ.get("OBSERVABILITY") != "phoenix":
+                return
+        try:
+                from observability.phoenix import launch_phoenix_tracer
+        except ImportError:
+                renderer.show(
+                        "OBSERVABILITY=phoenix set, but the extra is missing; "
+                        "run `uv sync --extra observability`."
+                )
+                return
+        tracer = launch_phoenix_tracer()
+        session.events.subscribe(tracer)
+        renderer.show("observability: Phoenix tracing enabled (local UI launched)")
 
 
 def _build_model(renderer: Renderer) -> ChatModel:
@@ -57,6 +79,7 @@ async def _main() -> None:
         session, supervision, plan_mode, progress = build_session(
                 model, renderer=renderer, inputer=inputer, policy=policy
         )
+        _enable_observability(session, renderer)
         await run_chat(
                 session,
                 supervision=supervision,
