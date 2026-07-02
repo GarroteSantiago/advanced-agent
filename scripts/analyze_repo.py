@@ -35,8 +35,11 @@ sys.path.insert(0, str(_ROOT))
 
 import main  # noqa: E402
 from agent.cli import build_session  # noqa: E402
+from agent.documenter import Documenter  # noqa: E402
 from agent.interaction import ConsoleRenderer, Renderer  # noqa: E402
 from agent.session import Session  # noqa: E402
+from agent.team import build_scribe  # noqa: E402
+from harness.delegation import SubagentReport  # noqa: E402
 from harness.events import (  # noqa: E402
         AuditLogger,
         DocumentsRetrieved,
@@ -116,6 +119,18 @@ def _report(renderer: Renderer, result: ExecutionResult, audit: AuditLogger) -> 
         show(result.final_output or "(no answer)")
 
 
+def _docs_report(renderer: Renderer, report: SubagentReport, docs_dir: Path) -> None:
+        show = renderer.show
+        show("\n--- documentation, by the Scribe (§1/§2) ---")
+        show(f"  docs folder: {docs_dir}")
+        if report.modified_files:
+                show(f"  files written ({len(report.modified_files)}):")
+                for path in report.modified_files:
+                        show(f"    - {path}")
+        else:
+                show("  (no files written)")
+
+
 def _memory_report(
         renderer: Renderer, recalled: ProjectMemory, absorbed: ProjectMemory
 ) -> None:
@@ -183,7 +198,6 @@ async def _run(target: str) -> None:
                 inputer=_SilentInputer(),
                 retriever=retriever,
                 memory_briefing=recalled.brief(),
-                docs_dir=docs_dir,
         )
 
         audit = AuditLogger()
@@ -193,8 +207,16 @@ async def _run(target: str) -> None:
         renderer.show(f"\nanalysing: {target}\n")
         result = await session.ask(_task(target))
         absorbed = service.absorb(project_id, result)
+
+        # Run-boundary documentation: hand the whole ledger to the Scribe so it
+        # writes one file per agent into the (confined) docs folder -- reliably,
+        # not subject to the principal's mid-run delegation.
+        documenter = Documenter(build_scribe(model, docs_dir=docs_dir))
+        doc_report = await documenter.document(result.ledger)
+
         _report(renderer, result, audit)
         _memory_report(renderer, recalled, absorbed)
+        _docs_report(renderer, doc_report, docs_dir)
 
         if trace_handle is not None:
                 trace_handle.flush()

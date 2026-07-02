@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent.team import build_subagents
+from agent.team import build_scribe, build_subagents
 from llm import Completion, ToolCall
 from tests.doubles import FakeChatModel
 
 
-def test_build_subagents_registers_the_six_roles() -> None:
+def test_build_subagents_registers_the_five_analysis_roles() -> None:
         registry = build_subagents(FakeChatModel([]))
 
         names = {delegate.name for delegate in registry.all()}
-        assert names == {"explore", "research", "implement", "test", "review", "scribe"}
+        assert names == {"explore", "research", "implement", "test", "review"}
+        assert "scribe" not in names  # the Scribe is a run-boundary writer, not a delegate
 
 
 def test_each_subagent_exposes_a_task_parameter() -> None:
@@ -54,18 +55,17 @@ async def test_the_scribe_writes_inside_the_docs_folder_but_is_blocked_outside(t
                         Completion(content="wrote explore.md"),
                 ]
         )
-        registry = build_subagents(model, docs_dir=docs)
 
-        report = await registry.resolve("scribe").delegate("document the explore findings")
+        report = await build_scribe(model, docs_dir=docs).delegate("document the explore findings")
 
         assert Path(inside).read_text(encoding="utf-8") == "explore findings"
         assert not Path(outside).exists()  # confinement blocked the out-of-folder write
         assert report.modified_files == (inside,)  # only the permitted write was recorded
 
 
-async def test_only_the_scribe_can_write(tmp_path) -> None:
-        # A read-only role (explore) has no write_file tool at all: a write call
-        # comes back as an unknown-tool failure, and nothing is recorded.
+async def test_a_read_only_analysis_agent_cannot_write(tmp_path) -> None:
+        # explore has no write_file tool at all: a write call comes back as an
+        # unknown-tool failure, and nothing is recorded.
         model = FakeChatModel(
                 [
                         Completion(
@@ -80,9 +80,8 @@ async def test_only_the_scribe_can_write(tmp_path) -> None:
                         Completion(content="cannot write"),
                 ]
         )
-        registry = build_subagents(model, docs_dir=tmp_path)
 
-        report = await registry.resolve("explore").delegate("try to write")
+        report = await build_subagents(model).resolve("explore").delegate("try to write")
 
         assert not (tmp_path / "x.md").exists()
         assert report.modified_files == ()

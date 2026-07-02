@@ -4,6 +4,7 @@
 ``AgentConfiguration``, and ``AgentState`` (the advanced TP) build on it later.
 """
 
+from agent.documenter import Documenter
 from agent.interaction import ConsoleInputer, ConsoleRenderer, Inputer, Renderer
 from agent.planning import (
         ApprovePlan,
@@ -21,6 +22,7 @@ __all__ = [
         "ApprovePlan",
         "ConsoleInputer",
         "ConsoleRenderer",
+        "Documenter",
         "Inputer",
         "PlanMode",
         "PlanReview",

@@ -58,7 +58,6 @@ def build_subagents(
         model: ChatModel,
         approver: Approver | None = None,
         retriever: Retriever | None = None,
-        docs_dir: Path = _DEFAULT_DOCS_DIR,
 ) -> SubagentRegistry:
         # The Researcher gets rag_search (RAG-first) when a retriever is available,
         # always with web_search as fallback. Its RetrievalLog + bus carry retrieved
@@ -123,20 +122,28 @@ def build_subagents(
                                 approver=approver,
                                 task_description="What to review and against which request.",
                         ),
-                        Subagent(
-                                name="scribe",
-                                description=(
-                                        "The only writer: document the collected findings into the "
-                                        "docs folder, one file per agent."
-                                ),
-                                system_prompt=f"{SCRIBE_PROMPT}\n\nThe documentation folder is: {docs_dir}",
-                                model=model,
-                                tools=[WriteFileTool(), ListFilesTool()],
-                                approver=_scribe_approver(docs_dir, approver),
-                                task_description=(
-                                        "The findings to document; include each agent's results so "
-                                        "one file per agent can be written."
-                                ),
-                        ),
                 ]
+        )
+
+
+def build_scribe(
+        model: ChatModel,
+        approver: Approver | None = None,
+        docs_dir: Path = _DEFAULT_DOCS_DIR,
+) -> Subagent:
+        """The Scribe: the only writer, confined to ``docs_dir``.
+
+        Deliberately *not* part of ``build_subagents`` -- the principal does not
+        delegate to it mid-run (that left the writer under-fed). Instead the app
+        invokes it at the run boundary via ``Documenter`` with the whole ledger,
+        so it reliably gets every agent's findings and writes one file per agent.
+        """
+        return Subagent(
+                name="scribe",
+                description="Document the collected findings into the docs folder, one file per agent.",
+                system_prompt=f"{SCRIBE_PROMPT}\n\nThe documentation folder is: {docs_dir}",
+                model=model,
+                tools=[WriteFileTool(), ListFilesTool()],
+                approver=_scribe_approver(docs_dir, approver),
+                task_description="The findings to document, grouped per agent.",
         )

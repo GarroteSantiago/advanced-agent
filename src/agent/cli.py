@@ -12,7 +12,6 @@ directly. That keeps the REPL testable with fakes.
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 
 from agent.interaction import Inputer, Renderer
 from agent.planning import ApprovePlan, PlanMode, PlanReview, RejectPlan, RevisePlan
@@ -77,16 +76,16 @@ def build_session(
         policy: PolicyConfig | None = None,
         retriever: Retriever | None = None,
         memory_briefing: str | None = None,
-        docs_dir: Path = Path("docs/analysis"),
 ) -> tuple[Session, SupervisionPolicy, PlanMode, ProgressView]:
         """Wire the principal coordinator Session with its subagent team, both
         interactive modes (off), and a live progress view subscribed to events.
 
-        The principal owns no tools; it delegates to the six subagents. If a
-        ``policy`` is given, its guardrails are checked before supervision. A
+        The principal owns no tools; it delegates to the five analysis subagents.
+        If a ``policy`` is given, its guardrails are checked before supervision. A
         ``memory_briefing`` (what earlier sessions learned about this project) is
         seeded once after the principal's instructions -- see ``ProjectMemory``.
-        The Scribe (the only writer) is confined to ``docs_dir``.
+        The Scribe is a separate run-boundary writer (see ``Documenter``), not a
+        principal delegate.
         """
         confirmer = ConsoleConfirmer(inputer)
         supervision = SupervisionPolicy(confirmer)
@@ -102,7 +101,7 @@ def build_session(
 
         # The principal is a coordinator: no direct tools, it works by delegating
         # to the subagent team. Give it tools here if you want it to act directly.
-        team = build_subagents(model, approver, retriever, docs_dir=docs_dir)
+        team = build_subagents(model, approver, retriever)
         session = Session(
                 model,
                 tools=[],
