@@ -26,6 +26,7 @@ from harness.tools import (
 from harness.tools.request import ToolRequest
 from llm import ChatModel
 from prompts import PRINCIPAL_PROMPT
+from rag import Retriever
 
 HELP = (
         "commands: /plan (toggle plan mode), /supervise (toggle supervision), "
@@ -69,6 +70,7 @@ def build_session(
         renderer: Renderer,
         inputer: Inputer,
         policy: PolicyConfig | None = None,
+        retriever: Retriever | None = None,
 ) -> tuple[Session, SupervisionPolicy, PlanMode, ProgressView]:
         """Wire the principal coordinator Session with its subagent team, both
         interactive modes (off), and a live progress view subscribed to events.
@@ -91,7 +93,7 @@ def build_session(
                 tools=[],
                 approver=approver,
                 plan_mode=plan_mode,
-                subagents=build_subagents(model, approver),
+                subagents=build_subagents(model, approver, retriever),
                 system_prompt=PRINCIPAL_PROMPT,
         )
 

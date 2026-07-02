@@ -27,9 +27,9 @@ EXPLORER_PROMPT = (
 )
 
 RESEARCHER_PROMPT = (
-        "You are the Researcher. Use web_search to find authoritative documentation "
-        "for the project's framework/ecosystem. Prefer official docs. Summarize what "
-        "you found and cite the sources."
+        "You are the Researcher. Consult the indexed framework documentation with "
+        "rag_search FIRST; use web_search only as a fallback when the indexed docs "
+        "are insufficient. Summarize what you found and cite the sources."
 )
 
 IMPLEMENTER_PROMPT = (

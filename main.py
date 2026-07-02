@@ -13,7 +13,8 @@ from agent.cli import build_session, run_chat
 from agent.interaction import ConsoleInputer, ConsoleRenderer, Renderer
 from harness.tools import PolicyConfig
 from llm import ChatModel
-from llm.providers import OpenAIChatModel, PlaceholderChatModel
+from llm.providers import OpenAIChatModel, OpenAIEmbeddingModel, PlaceholderChatModel
+from rag import NumpyVectorStore, Retriever
 
 
 def _load_dotenv(path: str = ".env") -> None:
@@ -54,6 +55,21 @@ def _enable_observability(session: Session, renderer: Renderer) -> None:
         renderer.show("observability: Phoenix tracing enabled (local UI launched)")
 
 
+def _build_retriever(renderer: Renderer) -> Retriever | None:
+        """Load the RAG index when it exists and a key is available, else None.
+
+        Without a retriever the Researcher falls back to web search only.
+        """
+        index_dir = Path(os.environ.get("RAG_INDEX_DIR", "data/rag_index"))
+        if not os.environ.get("OPENAI_API_KEY") or not (index_dir / "chunks.json").exists():
+                return None
+        embedder = OpenAIEmbeddingModel(
+                model=os.environ.get("EMBED_MODEL", "text-embedding-3-small")
+        )
+        renderer.show(f"RAG: loaded index from {index_dir}")
+        return Retriever(embedder, NumpyVectorStore.load(index_dir))
+
+
 def _build_model(renderer: Renderer) -> ChatModel:
         if os.environ.get("OPENAI_API_KEY"):
                 model_name = os.environ.get("MODEL", "gpt-5-nano")
@@ -76,8 +92,9 @@ async def _main() -> None:
                 renderer.show("loaded guardrails from agent.config.toml")
 
         model = _build_model(renderer)
+        retriever = _build_retriever(renderer)
         session, supervision, plan_mode, progress = build_session(
-                model, renderer=renderer, inputer=inputer, policy=policy
+                model, renderer=renderer, inputer=inputer, policy=policy, retriever=retriever
         )
         _enable_observability(session, renderer)
         await run_chat(

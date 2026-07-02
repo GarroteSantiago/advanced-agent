@@ -8,9 +8,11 @@ mutating tool (the Tester's ``run_command``) is gated by the same policy.
 
 from __future__ import annotations
 
+from agent.rag_tool import RagSearchTool, RetrievalLog
 from agent.subagent import Subagent
 from harness.delegation import SubagentRegistry
-from harness.tools import Approver
+from harness.events import EventBus
+from harness.tools import Approver, ToolInterface
 from harness.tools.adapters import (
         ListFilesTool,
         ReadFileTool,
@@ -25,9 +27,25 @@ from prompts import (
         REVIEWER_PROMPT,
         TESTER_PROMPT,
 )
+from rag import Retriever
 
 
-def build_subagents(model: ChatModel, approver: Approver | None = None) -> SubagentRegistry:
+def build_subagents(
+        model: ChatModel,
+        approver: Approver | None = None,
+        retriever: Retriever | None = None,
+) -> SubagentRegistry:
+        # The Researcher gets rag_search (RAG-first) when a retriever is available,
+        # always with web_search as fallback. Its RetrievalLog + bus carry retrieved
+        # sources into its report -> the shared ledger.
+        research_tools: list[ToolInterface] = [WebSearchTool()]
+        research_bus: EventBus | None = None
+        research_log: RetrievalLog | None = None
+        if retriever is not None:
+                research_log = RetrievalLog()
+                research_bus = EventBus()
+                research_tools = [RagSearchTool(retriever, research_log, research_bus), WebSearchTool()]
+
         return SubagentRegistry(
                 [
                         Subagent(
@@ -44,11 +62,13 @@ def build_subagents(model: ChatModel, approver: Approver | None = None) -> Subag
                         ),
                         Subagent(
                                 name="research",
-                                description="Look up framework/ecosystem documentation on the web.",
+                                description="Look up framework/ecosystem documentation (RAG, then web).",
                                 system_prompt=RESEARCHER_PROMPT,
                                 model=model,
-                                tools=[WebSearchTool()],
+                                tools=research_tools,
                                 approver=approver,
+                                event_bus=research_bus,
+                                retrieval_log=research_log,
                                 task_description="What to research; be specific about the framework/topic.",
                         ),
                         Subagent(
