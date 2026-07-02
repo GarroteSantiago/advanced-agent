@@ -13,8 +13,9 @@ evaluators will look for.
 config-driven guardrails; the advanced layer left as deferred stubs.
 
 **Progress update (2026-07-02) — branch `feat/advanced-layer`.** Phases 1a, 1b,
-2, 3, 4, and 5, plus the observability boundary, delivered (TDD, atomic commits,
-185 tests green, ruff + pyright clean):
+2, 3, 4, and 5, plus the observability boundary, the write-path→ledger +
+Scribe/Documenter, and packaged ≥2-task evidence, delivered (TDD, atomic commits,
+196 tests green, ruff + pyright clean):
 - **1a** shared `TaskLedger` on the execution context (`3f7ed66`).
 - **1b** enriched observability event stream + opt-in Phoenix adapter
   (`9415564`, `9fde1a4`).
@@ -31,6 +32,11 @@ config-driven guardrails; the advanced layer left as deferred stubs.
 - **5** persistent per-project memory: `ProjectMemory` aggregate + `MemoryStore`
   port + `JsonMemoryStore` + `ProjectMemoryService` run-boundary seam, wired into
   CLI + driver (`2643752`, `75d3a2c`).
+- **write-path + Scribe** `modified_files` auto-population + a docs-confined Scribe
+  invoked at the run boundary by `Documenter`, one file per agent (`b652b6e`,
+  `b4c29ca`).
+- **§8 evidence** two live runs captured to `docs/evidence/` (RAG, memory recall,
+  partial-findings, observability, Scribe docs).
 
 **Verification honesty:** the multi-agent flow **and** RAG are now **live-verified**
 against real OpenAI (delegation happens; RAG sources reach the ledger); the OTel
@@ -172,25 +178,27 @@ Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `O
 
 ---
 
-## 8. Tests to run with the agent — ❌ ABSENT (as end-to-end demos)
+## 8. Tests to run with the agent — ✅ DONE (two runs captured in `docs/evidence/`)
 
-Unit/integration suite is broad (185 tests). These four are the use-case demos:
+Unit/integration suite is broad (196 tests). The four use-case demos below are now
+**packaged as committed evidence** from two live runs over `scripts/sample_app` —
+see [`docs/evidence/task-evidence.md`](docs/evidence/task-evidence.md) for the index.
 
-- [ ] ⚠️ A task using **RAG** that shows retrieved sources — mechanism live-verified (Researcher retrieved, 35 sources in the ledger); packaged demo/evidence pending.
-- [x] ⚠️ A task using **project memory** — mechanism live-verified end-to-end (a second run of `scripts/sample_app` was briefed from the first via `data/memory/`); packaging this two-run demo as committed evidence is still pending.
-- [ ] ⚠️ A task where the agent **changes strategy / stops / asks for help** — mechanism now exists (nudge-then-stop + partial-findings synthesis, Phase 4); packaged end-to-end demo/evidence still pending.
+- [x] ✅ A task using **RAG** that shows retrieved sources — Run 1 consulted **44** RAG sources; the Researcher's `research.md` cites FastAPI conventions (`task-1-analysis.txt`, `analysis/sample_app/research.md`).
+- [x] ✅ A task using **project memory** — Run 1 stored 7 entries; **Run 2 recalled all 7** and was briefed from them (`task-1` vs `task-2-memory-recall.txt`).
+- [x] ✅ A task where the agent **changes strategy / stops / explains what's missing** — capped subagents return **partial findings** (what they found + why partial), not a bare halt reason: **4 partial-findings reports** in Run 1 (`task-1-analysis.txt`). (No live loop occurred, so nudges stayed at 0 — correctly quiescent.)
 - [x] ✅ At least one execution **recorded in the observability tool** — live OTel trace of a full run at `docs/evidence/repo-analysis.otel.jsonl` (59 spans, single-rooted, per-agent attributed).
 
 ---
 
 ## 9. Deliverables
 
-- [ ] ⚠️ 1. Complete, working code — harness + multi-agent + observability built & tested; RAG/memory/context still pending.
+- [x] ✅ 1. Complete, working code — harness + multi-agent + RAG + context/loop + persistent memory + observability + docs-writing, all built & tested (196 tests).
 - [ ] ⚠️ 2. README with install/config/run — needs updating for `OBSERVABILITY`, the `observability` extra, and the multi-agent design.
 - [ ] ⚠️ 3. Use-case description — decided (see §7); not yet written up.
 - [ ] ⚠️ 4. Architecture explanation — good docstrings + the principal/subagent/ledger design now exists; no deliverable doc yet.
 - [ ] ❌ 5. RAG base documentation.
-- [ ] ❌ 6. Evidence of ≥2 executed tasks.
+- [x] ✅ 6. Evidence of ≥2 executed tasks — two live runs captured in `docs/evidence/` (`task-1-analysis.txt`, `task-2-memory-recall.txt`, `task-evidence.md`, + the Scribe's per-agent docs).
 - [ ] ⚠️ 7. Observability screenshots / full trace — **full OTel trace captured** (`docs/evidence/`); live Phoenix-UI screenshot still optional.
 - [ ] ❌ 8. Reflection.
 
@@ -213,4 +221,4 @@ Unit/integration suite is broad (185 tests). These four are the use-case demos:
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
 | Persistent project memory | ✅ Done (Phase 5): ProjectMemory + JSON store + run-boundary service; live-verified cross-session recall |
 | Context/loop management | ✅ Done (Phase 4): windowing wired, no-progress detection (nudge-then-stop), partial-findings on abort |
-| Use case + evidence + deliverable docs | ⚠️ Use case decided; evidence/docs pending |
+| Use case + evidence + deliverable docs | ⚠️ Use case decided; **≥2-task evidence captured** (`docs/evidence/`); deliverable write-ups (README, architecture, RAG-base, reflection) still pending |
