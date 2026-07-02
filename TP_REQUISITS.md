@@ -24,10 +24,11 @@ config-driven guardrails; the advanced layer left as deferred stubs.
   wired into the Researcher (`ed87efa`, `8f9472a`, `eafa50b`, `d759fa5`).
 
 **Verification honesty:** the multi-agent flow **and** RAG are now **live-verified**
-against real OpenAI (delegation happens; RAG sources reach the ledger). Still
-**not** smoke-tested: the Phoenix boundary against a live Phoenix. Deferred
-sections (persistent memory, context/loop management, packaged use-case evidence,
-deliverable docs) remain open.
+against real OpenAI (delegation happens; RAG sources reach the ledger); the OTel
+boundary is smoke-tested against a real SDK and a live trace is captured
+(`docs/evidence/`). Only the live **Phoenix UI** screenshot is still un-captured.
+Deferred sections (persistent memory, packaged use-case evidence, deliverable
+docs) remain open.
 
 **Legend**
 - `[x]` — **DONE**: implemented and covered by tests.
@@ -125,12 +126,12 @@ Framework-level corpus, **FastAPI** (21 curated docs → 275 chunks). Embeddings
 
 ---
 
-## 6. Observability — ⚠️ event stream EXERCISED LIVE; Phoenix adapter still un-smoke-tested
+## 6. Observability — ✅ event stream aggregated LIVE; OTel boundary smoke-tested + live trace captured
 
-Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `OBSERVABILITY=phoenix`; Phoenix/OTel in an optional `observability` extra. Event stream enriched **and now aggregated across the whole team**: subagents run on their own buses, and an `EventForwarder` bridges each onto the principal bus (tagged with `Event.source`), so a single sink sees the full run. A live analysis recorded 25 model calls, 2 guard stops, 2 documents retrieved, 58k tokens, ~$0.01 across principal + subagents (`scripts/analyze_repo.py` evidence report). The remaining gap is smoke-testing the **Phoenix** sink itself (a nested trace) — now unblocked by the aggregation.
+Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `OBSERVABILITY=phoenix`; Phoenix/OTel in an optional `observability` extra. Event stream enriched **and aggregated across the whole team**: subagents run on their own buses, and an `EventForwarder` bridges each onto the principal bus (tagged with `Event.source`), so a single sink sees the full run. The `PhoenixTracer` maps that stream onto nested OTel spans — one run root, an `llm` span per model call, a `tool` span per tool call — and is now smoke-tested against a **real OTel SDK** (`test_observability_phoenix.py`, in-memory exporter), including the single-root invariant (a subagent's forwarded stop must not close the principal's root). A live analysis of `scripts/sample_app` was recorded to an OTel trace: **59 spans in one run tree** (27 llm, 31 tool, 1 root), every span attributed to its agent (`principal`/`explore`/`research`/`test`) via `Event.source` — captured at `docs/evidence/repo-analysis.otel.jsonl` by the `OBSERVABILITY=otel-file` sink. The only remaining gap is a screenshot of the **live Phoenix UI** (the `OBSERVABILITY=phoenix` path); the durable file trace is the headless equivalent.
 
-- [ ] ⚠️ Integrate Langfuse/LangSmith/Phoenix/equivalent — **Phoenix adapter implemented + wired**, but **not smoke-tested against a live Phoenix**.
-- [ ] ❌ Used in ≥1 delivered test — no live trace captured yet (pure span-mapping is unit-tested).
+- [x] ✅ Integrate Langfuse/LangSmith/Phoenix/equivalent — **Phoenix/OTel adapter implemented, wired, and smoke-tested against a real OTel SDK**. Live Phoenix-UI screenshot still optional.
+- [x] ✅ Used in ≥1 delivered test — live trace captured (`docs/evidence/`) **and** the boundary exercised in a delivered test (`test_observability_phoenix.py`).
 
 ### Minimum recorded fields (event stream, `src/harness/events/event.py`)
 
@@ -164,7 +165,7 @@ Unit/integration suite is broad (140 tests). These four are the use-case demos:
 - [ ] ⚠️ A task using **RAG** that shows retrieved sources — mechanism live-verified (Researcher retrieved, 35 sources in the ledger); packaged demo/evidence pending.
 - [ ] ❌ A task using **project memory**.
 - [ ] ⚠️ A task where the agent **changes strategy / stops / asks for help** — mechanism now exists (nudge-then-stop + partial-findings synthesis, Phase 4); packaged end-to-end demo/evidence still pending.
-- [ ] ❌ At least one execution **recorded in the observability tool** (adapter ready; run pending).
+- [x] ✅ At least one execution **recorded in the observability tool** — live OTel trace of a full run at `docs/evidence/repo-analysis.otel.jsonl` (59 spans, single-rooted, per-agent attributed).
 
 ---
 
@@ -176,7 +177,7 @@ Unit/integration suite is broad (140 tests). These four are the use-case demos:
 - [ ] ⚠️ 4. Architecture explanation — good docstrings + the principal/subagent/ledger design now exists; no deliverable doc yet.
 - [ ] ❌ 5. RAG base documentation.
 - [ ] ❌ 6. Evidence of ≥2 executed tasks.
-- [ ] ❌ 7. Observability screenshots / full trace.
+- [ ] ⚠️ 7. Observability screenshots / full trace — **full OTel trace captured** (`docs/evidence/`); live Phoenix-UI screenshot still optional.
 - [ ] ❌ 8. Reflection.
 
 ---
@@ -194,7 +195,7 @@ Unit/integration suite is broad (140 tests). These four are the use-case demos:
 | Base harness, tools, config & policies | ✅ Done and solid |
 | Multi-agent architecture (5 subagents) | ✅ Done (fakes-verified; live run pending) |
 | Shared task state (TaskLedger) | ✅ Structure + subagent-result merge done; sources/files fill in with §3 |
-| Observability (external tool) | ⚠️ Built + opt-in wired; live trace/screenshot pending |
+| Observability (external tool) | ✅ Built + wired + OTel boundary smoke-tested; live trace captured (`docs/evidence/`). Phoenix-UI screenshot optional |
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
 | Persistent project memory | ❌ Not started (Phase 5) |
 | Context/loop management | ✅ Done (Phase 4): windowing wired, no-progress detection (nudge-then-stop), partial-findings on abort |
