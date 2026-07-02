@@ -170,10 +170,10 @@ Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `O
 
 ---
 
-## 7. Concrete use case — ⚠️ DECIDED, not yet executed
+## 7. Concrete use case — ✅ DONE (written up + executed)
 
-- [ ] ⚠️ Define a concrete objective over a chosen repo/ecosystem — **decided**: analyze an unknown FastAPI repo → architecture/deps/risks/commands report. Exercised in live smoke runs; not yet a packaged deliverable.
-- [ ] ⚠️ Verifiable result produced — live runs produced coherent reports; formal success-criterion write-up pending.
+- [x] ✅ Define a concrete objective over a chosen repo/ecosystem — analyze an unknown FastAPI repo → architecture/deps/risks/commands report, written to a docs folder. Written up in [`docs/use-case.md`](docs/use-case.md); executed (§8 evidence).
+- [x] ✅ Verifiable result produced — success criteria stated in `use-case.md`; the two live runs met them (APIRouter wiring, in-memory-store risk, `pytest` command; Tester ran the suite PASS).
 - [x] Fits a use-case shape — repo-analysis report.
 
 ---
@@ -194,13 +194,13 @@ see [`docs/evidence/task-evidence.md`](docs/evidence/task-evidence.md) for the i
 ## 9. Deliverables
 
 - [x] ✅ 1. Complete, working code — harness + multi-agent + RAG + context/loop + persistent memory + observability + docs-writing, all built & tested (196 tests).
-- [ ] ⚠️ 2. README with install/config/run — needs updating for `OBSERVABILITY`, the `observability` extra, and the multi-agent design.
-- [ ] ⚠️ 3. Use-case description — decided (see §7); not yet written up.
-- [ ] ⚠️ 4. Architecture explanation — good docstrings + the principal/subagent/ledger design now exists; no deliverable doc yet.
-- [ ] ❌ 5. RAG base documentation.
+- [x] ✅ 2. README with install/config/run — [`README.md`](README.md) refreshed: env-var table (`OBSERVABILITY`/`MEMORY_DIR`/`DOCS_DIR`/RAG), the `observability` extra, both entry points, the multi-agent design, doc index.
+- [x] ✅ 3. Use-case description — [`docs/use-case.md`](docs/use-case.md) (objective, team, success criteria, boundaries).
+- [x] ✅ 4. Architecture explanation — [`docs/architecture.md`](docs/architecture.md) (onion layers, loop/navigator, delegation, control, RAG, memory, observability, Scribe) + the PlantUML diagrams.
+- [x] ✅ 5. RAG base documentation — [`docs/rag-base.md`](docs/rag-base.md) (corpus, pipeline, `scripts/ingest_rag.py`, source attribution).
 - [x] ✅ 6. Evidence of ≥2 executed tasks — two live runs captured in `docs/evidence/` (`task-1-analysis.txt`, `task-2-memory-recall.txt`, `task-evidence.md`, + the Scribe's per-agent docs).
 - [ ] ⚠️ 7. Observability screenshots / full trace — **full OTel trace captured** (`docs/evidence/`); live Phoenix-UI screenshot still optional.
-- [ ] ❌ 8. Reflection.
+- [x] ✅ 8. Reflection — [`docs/reflection.md`](docs/reflection.md).
 
 ---
 
@@ -221,4 +221,4 @@ see [`docs/evidence/task-evidence.md`](docs/evidence/task-evidence.md) for the i
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
 | Persistent project memory | ✅ Done (Phase 5): ProjectMemory + JSON store + run-boundary service; live-verified cross-session recall |
 | Context/loop management | ✅ Done (Phase 4): windowing wired, no-progress detection (nudge-then-stop), partial-findings on abort |
-| Use case + evidence + deliverable docs | ⚠️ Use case decided; **≥2-task evidence captured** (`docs/evidence/`); deliverable write-ups (README, architecture, RAG-base, reflection) still pending |
+| Use case + evidence + deliverable docs | ✅ Use case written up (`docs/use-case.md`); ≥2-task evidence captured; all deliverable docs done (README, architecture, RAG-base, reflection). Only the optional live Phoenix-UI screenshot remains |
