@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11.9"
 dependencies = [
+    "numpy>=1.26",
     "openai>=1.50.0",
     "tavily-python>=0.5.0",
 ]
@@ -31,6 +32,7 @@ packages = [
     "src/memory",
     "src/observability",
     "src/prompts",
+    "src/rag",
     "src/common",
 ]
 
