@@ -13,7 +13,8 @@ evaluators will look for.
 config-driven guardrails; the advanced layer left as deferred stubs.
 
 **Progress update (2026-07-02) — branch `feat/advanced-layer`.** Phases 1a, 1b,
-2, and 3 delivered (TDD, atomic commits, 147 tests green, ruff + pyright clean):
+2, 3, 4, and 5, plus the observability boundary, delivered (TDD, atomic commits,
+185 tests green, ruff + pyright clean):
 - **1a** shared `TaskLedger` on the execution context (`3f7ed66`).
 - **1b** enriched observability event stream + opt-in Phoenix adapter
   (`9415564`, `9fde1a4`).
@@ -22,12 +23,22 @@ config-driven guardrails; the advanced layer left as deferred stubs.
   `bc0e1f7`).
 - **3** RAG: chunk/embed/vector/retrieve pipeline + FastAPI corpus + `rag_search`
   wired into the Researcher (`ed87efa`, `8f9472a`, `eafa50b`, `d759fa5`).
+- **4** context & loop management: `ContextManager` windowing, `ProgressTracker`
+  nudge-then-stop loop detection, partial-findings synthesis on abort
+  (`40589a1`, `6e731d0`, `46600af`, `2b0f6e9`, `97abd65`).
+- **obs** event aggregation across subagents + OTel boundary smoke-tested + live
+  trace captured (`db971ec`, `cc8a99b`, `fc3561b`, `59c1f05`).
+- **5** persistent per-project memory: `ProjectMemory` aggregate + `MemoryStore`
+  port + `JsonMemoryStore` + `ProjectMemoryService` run-boundary seam, wired into
+  CLI + driver (`2643752`, `75d3a2c`).
 
 **Verification honesty:** the multi-agent flow **and** RAG are now **live-verified**
 against real OpenAI (delegation happens; RAG sources reach the ledger); the OTel
 boundary is smoke-tested against a real SDK and a live trace is captured
-(`docs/evidence/`). Only the live **Phoenix UI** screenshot is still un-captured.
-Deferred sections (persistent memory, packaged use-case evidence, deliverable
+(`docs/evidence/`); persistent per-project memory is live-verified (a second run
+over a target is briefed from the first). Only the live **Phoenix UI** screenshot
+is still un-captured.
+Deferred sections (packaged use-case evidence, deliverable
 docs) remain open.
 
 **Legend**
@@ -79,10 +90,12 @@ Delegation surfaced as tool calls; routed by `DelegatingActionPhase` (`src/harne
 - [ ] ⚠️ Records **modified files** — `modified_files` field + `touching` transition exist; **populated once the write-path→ledger wiring lands**.
 - [ ] ⚠️ Records **relevant observations** — `observations` field + `observing_that` transition exist; auto-population partial.
 
-### Persistent per-project memory — ❌ ABSENT (Phase 5)
+### Persistent per-project memory — ✅ DONE (Phase 5, live-verified)
 
-- [ ] ❌ Persists across sessions — `src/memory/__init__.py` still a stub.
-- [ ] ❌ Stores architecture/files/deps/commands/conventions/decisions/bugs/summaries.
+`src/memory/`: `ProjectMemory` aggregate (immutable, copy-on-write, self-briefing) over the spec's category buckets; `MemoryStore` port + `JsonMemoryStore` (one JSON per project under gitignored `data/memory/`); `ProjectMemoryService` briefs a run at start and absorbs its ledger at end. Wired into both the CLI (keyed by working dir) and the `analyze_repo` driver (keyed by target path). Injected as a seeded briefing at the run boundary, **not** through `ContextManager` (kept a pure windowing projection).
+
+- [x] ✅ Persists across sessions — live-verified: a first run of `scripts/sample_app` stored 5 entries; a fresh process re-run recalled all 5 to brief the agent (grew to 9).
+- [ ] ⚠️ Stores architecture/files/deps/commands/conventions/decisions/bugs/summaries — the 8 category buckets exist; deterministic ledger-based capture currently fills the coarse **summaries** + **files** buckets. Sorting learnings into the finer buckets is the noted model-**digest** seam (`ProjectMemoryService.absorb`).
 
 ---
 
@@ -160,10 +173,10 @@ Phoenix adapter built as an `EventHandler` (`src/observability/`), opt-in via `O
 
 ## 8. Tests to run with the agent — ❌ ABSENT (as end-to-end demos)
 
-Unit/integration suite is broad (140 tests). These four are the use-case demos:
+Unit/integration suite is broad (185 tests). These four are the use-case demos:
 
 - [ ] ⚠️ A task using **RAG** that shows retrieved sources — mechanism live-verified (Researcher retrieved, 35 sources in the ledger); packaged demo/evidence pending.
-- [ ] ❌ A task using **project memory**.
+- [x] ⚠️ A task using **project memory** — mechanism live-verified end-to-end (a second run of `scripts/sample_app` was briefed from the first via `data/memory/`); packaging this two-run demo as committed evidence is still pending.
 - [ ] ⚠️ A task where the agent **changes strategy / stops / asks for help** — mechanism now exists (nudge-then-stop + partial-findings synthesis, Phase 4); packaged end-to-end demo/evidence still pending.
 - [x] ✅ At least one execution **recorded in the observability tool** — live OTel trace of a full run at `docs/evidence/repo-analysis.otel.jsonl` (59 spans, single-rooted, per-agent attributed).
 
@@ -193,10 +206,10 @@ Unit/integration suite is broad (140 tests). These four are the use-case demos:
 | Section | State |
 |---|---|
 | Base harness, tools, config & policies | ✅ Done and solid |
-| Multi-agent architecture (5 subagents) | ✅ Done (fakes-verified; live run pending) |
+| Multi-agent architecture (5 subagents) | ✅ Done + live-verified (real gpt-5-nano delegates; reports merge into the ledger) |
 | Shared task state (TaskLedger) | ✅ Structure + subagent-result merge done; sources/files fill in with §3 |
 | Observability (external tool) | ✅ Built + wired + OTel boundary smoke-tested; live trace captured (`docs/evidence/`). Phoenix-UI screenshot optional |
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
-| Persistent project memory | ❌ Not started (Phase 5) |
+| Persistent project memory | ✅ Done (Phase 5): ProjectMemory + JSON store + run-boundary service; live-verified cross-session recall |
 | Context/loop management | ✅ Done (Phase 4): windowing wired, no-progress detection (nudge-then-stop), partial-findings on abort |
 | Use case + evidence + deliverable docs | ⚠️ Use case decided; evidence/docs pending |
