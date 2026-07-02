@@ -73,7 +73,7 @@ Delegation surfaced as tool calls; routed by `DelegatingActionPhase` (`src/harne
 - [x] **Implementer** — `read_file` only; **proposes** changes, does not apply (per use-case decision).
 - [x] **Tester** — `read_file` + `run_command` (the only command-running subagent).
 - [x] **Reviewer** — an **AI** subagent (`read_file`), distinct from the human `PlanReviewer`.
-- [x] *(added)* **Scribe** — `write_file` + `list_files`; the **only** agent with write permission, confined to the docs folder by a per-agent `PolicyVerifier` (fail-closed). Documents the findings, one file per agent. Live-verified writing into the confined folder; ⚠️ the principal currently under-delegates (passes one agent's findings), so a live run may produce fewer than one-file-per-agent until the handoff is hardened.
+- [x] *(added)* **Scribe** — `write_file` + `list_files`; the **only** agent with write permission, confined to the docs folder by a per-agent `PolicyVerifier` (fail-closed). Invoked deterministically at the **run boundary** by `Documenter` (`src/agent/documenter.py`) with the whole ledger — *not* a mid-run principal delegate — so it reliably receives every agent's findings and writes **one file per contributing agent**. Live-verified: a run wrote `explore.md` / `research.md` / `test.md` + a summary index into the confined folder.
 
 ---
 
@@ -88,7 +88,7 @@ Delegation surfaced as tool calls; routed by `DelegatingActionPhase` (`src/harne
 - [ ] ⚠️ Records **progress** — `progress` field + `noting_progress` transition exist; iteration/token counters live; not yet auto-populated with milestone steps.
 - [x] Records **subagent results** — merged by `DelegatingActionPhase` (`crediting`).
 - [x] Records **sources consulted** — populated live: RAG retrievals flow in as `Origin.RAG` (verified: 35 sources reached the ledger in a live run). Repo/web reads not yet auto-tagged.
-- [x] ✅ Records **modified files** — write-path→ledger wiring landed: a mutating tool reports the files it changed on its `ToolResult.modified`, the action phases fold them into the ledger via `touching_all`, and a subagent drains its ledger's touched files into its report (merged upward). Unit-tested end to end **and now live-exercised**: the Scribe subagent (the only writer) wrote `docs/…/explorer.md` in a live run and that path reached the principal ledger.
+- [x] ✅ Records **modified files** — write-path→ledger wiring landed: a mutating tool reports the files it changed on its `ToolResult.modified`, the action phases fold them into the ledger via `touching_all`, and a subagent drains its ledger's touched files into its report. Unit-tested end to end **and live-exercised** through the Scribe: its own ledger records every file it writes and surfaces them on its report (the `Documenter` prints them). Note: because documentation runs at the run boundary, those paths live in the Scribe's report, not the *principal's* ledger — whose `modified_files` is legitimately empty for a read-only analysis run.
 - [ ] ⚠️ Records **relevant observations** — `observations` field + `observing_that` transition exist; auto-population partial.
 
 ### Persistent per-project memory — ✅ DONE (Phase 5, live-verified)
@@ -208,7 +208,7 @@ Unit/integration suite is broad (185 tests). These four are the use-case demos:
 |---|---|
 | Base harness, tools, config & policies | ✅ Done and solid |
 | Multi-agent architecture (5 subagents) | ✅ Done + live-verified (real gpt-5-nano delegates; reports merge into the ledger) |
-| Shared task state (TaskLedger) | ✅ Structure + subagent-result merge + RAG sources live + `modified_files` auto-populated from the write-path (unit-tested **and** live-exercised via the Scribe writing to the docs folder) |
+| Shared task state (TaskLedger) | ✅ Structure + subagent-result merge + RAG sources live + `modified_files` auto-populated from the write-path (unit-tested; live-exercised via the Scribe's report — the read-only analysis run's principal ledger is legitimately empty) |
 | Observability (external tool) | ✅ Built + wired + OTel boundary smoke-tested; live trace captured (`docs/evidence/`). Phoenix-UI screenshot optional |
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
 | Persistent project memory | ✅ Done (Phase 5): ProjectMemory + JSON store + run-boundary service; live-verified cross-session recall |
