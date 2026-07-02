@@ -171,5 +171,18 @@ class AgentExecutionContext:
         def touching(self, path: str) -> AgentExecutionContext:
                 return replace(self, _ledger=self._ledger.with_modified_file(path))
 
+        def touching_all(self, paths: Iterable[str]) -> AgentExecutionContext:
+                """Record several modified files at once (no-op for an empty run).
+
+                The batch form the action phases use to fold the paths a cycle's
+                tools reported into the ledger in one copy-on-write step.
+                """
+                ledger = self._ledger
+                for path in paths:
+                        ledger = ledger.with_modified_file(path)
+                if ledger is self._ledger:
+                        return self
+                return replace(self, _ledger=ledger)
+
         def observing_that(self, note: str) -> AgentExecutionContext:
                 return replace(self, _ledger=self._ledger.with_observation(note))

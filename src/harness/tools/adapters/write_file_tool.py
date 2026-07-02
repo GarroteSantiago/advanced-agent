@@ -51,4 +51,5 @@ class WriteFileTool:
                         call_id=request.call_id,
                         tool_name=self.name,
                         content=f"wrote {len(content)} characters to {path}",
+                        modified=(path,),
                 )

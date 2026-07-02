@@ -42,6 +42,9 @@ class DelegatingActionPhase:
                         else:
                                 result = await self._executor.execute(call)
                         results.append(result)
+                # Files the principal's own tools touched; a delegate's touches are
+                # already merged from its report in ``_merge``.
+                context = context.touching_all(path for result in results for path in result.modified)
                 return PhaseResult(context.with_tool_results(results), Outcome.ACTED)
 
         async def _run_delegation(

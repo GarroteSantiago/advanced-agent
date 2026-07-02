@@ -9,7 +9,7 @@ from harness.delegation import SubagentRegistry
 from harness.events import AuditLogger, EventBus, ModelCalled
 from harness.runtime import AgentExecutionContext
 from harness.tools import ToolRegistry
-from harness.tools.adapters import EchoTool
+from harness.tools.adapters import EchoTool, WriteFileTool
 from llm import Completion, Conversation, Message, ToolCall
 from tests.doubles import FakeChatModel
 
@@ -95,6 +95,84 @@ async def test_subagent_forwards_its_events_to_a_target_bus_tagged_with_its_name
         assert forwarded, "the subagent's own events should reach the principal bus"
         assert all(event.source == "explore" for event in forwarded)  # tagged with provenance
         assert any(isinstance(event, ModelCalled) for event in forwarded)  # incl. its model calls
+
+
+async def test_subagent_reports_the_files_it_modified(tmp_path) -> None:
+        target = tmp_path / "out.txt"
+        model = FakeChatModel(
+                [
+                        Completion(
+                                tool_calls=(
+                                        ToolCall(
+                                                id="c1",
+                                                name="write_file",
+                                                arguments={"path": str(target), "content": "x"},
+                                        ),
+                                )
+                        ),
+                        Completion(content="wrote the file"),
+                ]
+        )
+        writer = Subagent(
+                name="impl",
+                description="writes files",
+                system_prompt="You write.",
+                model=model,
+                tools=[WriteFileTool()],
+        )
+
+        report = await writer.delegate("write it")
+
+        assert report.succeeded is True
+        assert report.modified_files == (str(target),)
+
+
+async def test_a_delegated_write_reaches_the_principal_ledger(tmp_path) -> None:
+        target = tmp_path / "out.txt"
+        writer_model = FakeChatModel(
+                [
+                        Completion(
+                                tool_calls=(
+                                        ToolCall(
+                                                id="w1",
+                                                name="write_file",
+                                                arguments={"path": str(target), "content": "x"},
+                                        ),
+                                )
+                        ),
+                        Completion(content="done writing"),
+                ]
+        )
+        writer = Subagent(
+                name="impl",
+                description="writes files",
+                system_prompt="You write.",
+                model=writer_model,
+                tools=[WriteFileTool()],
+        )
+        principal_model = FakeChatModel(
+                [
+                        Completion(
+                                tool_calls=(ToolCall(id="c1", name="impl", arguments={"task": "write it"}),)
+                        ),
+                        Completion(content="the file was written"),
+                ]
+        )
+        loop = build_agent_loop(
+                model=principal_model,
+                registry=ToolRegistry(),
+                controller=Controller([IterationLimiter(5)]),
+                event_bus=EventBus(),
+                subagents=SubagentRegistry([writer]),
+        )
+
+        result = await loop.run(
+                AgentExecutionContext.for_task(
+                        "t-1", Conversation.of([Message.user("write a file")]), request="write a file"
+                )
+        )
+
+        assert list(result.ledger.modified_files()) == [str(target)]
 
 
 async def test_capped_subagent_returns_partial_findings_not_just_the_halt_reason() -> None:

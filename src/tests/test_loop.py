@@ -31,7 +31,7 @@ from harness.loop import (
 )
 from harness.runtime import AgentExecutionContext, ExecutionState
 from harness.tools import ToolExecutor, ToolRegistry
-from harness.tools.adapters import EchoTool
+from harness.tools.adapters import EchoTool, WriteFileTool
 from llm import Completion, Conversation, Message, Role, ToolCall
 from tests.doubles import FakeChatModel
 
@@ -206,6 +206,37 @@ async def test_progress_tracker_nudges_then_stops_a_repeating_model():
                 if m.role is Role.USER and "repeated the same action" in m.content
         ]
         assert len(nudges) == 1
+
+
+async def test_a_write_tool_call_records_the_modified_file_in_the_ledger(tmp_path):
+        target = tmp_path / "note.txt"
+        model = FakeChatModel(
+                [
+                        Completion(
+                                tool_calls=(
+                                        ToolCall(
+                                                id="c1",
+                                                name="write_file",
+                                                arguments={"path": str(target), "content": "hi"},
+                                        ),
+                                )
+                        ),
+                        Completion(content="done"),
+                ]
+        )
+        registry = ToolRegistry()
+        registry.register(WriteFileTool())
+        loop = build_agent_loop(
+                model=model,
+                registry=registry,
+                controller=Controller([IterationLimiter(max_iterations=5)]),
+                event_bus=EventBus(),
+        )
+
+        result = await loop.run(_context())
+
+        assert result.succeeded()
+        assert list(result.ledger.modified_files()) == [str(target)]
 
 
 async def test_reason_phase_sends_the_windowed_view_not_the_full_history():

@@ -14,17 +14,36 @@ from llm import Message
 
 @dataclass(frozen=True, slots=True)
 class ToolResult:
-        """What a tool produced (or failed to produce) for one call."""
+        """What a tool produced (or failed to produce) for one call.
+
+        ``modified`` names the files this call changed, so the loop can record
+        them in the shared ledger without parsing the human-readable ``content``:
+        the tool -- which alone knows what it altered -- reports it as data.
+        """
 
         call_id: str
         tool_name: str
         ok: bool
         content: str = ""
         error: str | None = None
+        modified: tuple[str, ...] = ()
 
         @classmethod
-        def success(cls, *, call_id: str, tool_name: str, content: str) -> ToolResult:
-                return cls(call_id=call_id, tool_name=tool_name, ok=True, content=content)
+        def success(
+                cls,
+                *,
+                call_id: str,
+                tool_name: str,
+                content: str,
+                modified: tuple[str, ...] = (),
+        ) -> ToolResult:
+                return cls(
+                        call_id=call_id,
+                        tool_name=tool_name,
+                        ok=True,
+                        content=content,
+                        modified=modified,
+                )
 
         @classmethod
         def failure(cls, *, call_id: str, tool_name: str, error: str) -> ToolResult:

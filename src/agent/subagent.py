@@ -97,9 +97,13 @@ class Subagent:
                 result = await self._loop.run(context)
 
                 sources = self._retrieval_log.drain() if self._retrieval_log is not None else ()
+                modified = tuple(result.ledger.modified_files())
                 if result.succeeded():
                         return SubagentReport(
-                                agent=self._name, output=result.final_output or "", sources=sources
+                                agent=self._name,
+                                output=result.final_output or "",
+                                sources=sources,
+                                modified_files=modified,
                         )
 
                 # Halted without a final answer: recover partial findings rather than
@@ -108,5 +112,9 @@ class Subagent:
                 summary = await self._synthesizer.summarize(result.conversation)
                 output = f"[partial -- {reason}] {summary}" if summary else reason
                 return SubagentReport(
-                        agent=self._name, output=output, succeeded=False, sources=sources
+                        agent=self._name,
+                        output=output,
+                        succeeded=False,
+                        sources=sources,
+                        modified_files=modified,
                 )
