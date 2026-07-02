@@ -8,18 +8,21 @@ rerouting the graph happens here.
 from __future__ import annotations
 
 from harness.control import Controller
+from harness.delegation import SubagentRegistry
 from harness.events import EventBus
 from harness.loop import (
         ActionPhase,
         AgentLoop,
         Continue,
+        DelegatingActionPhase,
         Halt,
         Navigator,
         ObservationPhase,
         Outcome,
+        Phase,
         ReasonPhase,
 )
-from harness.tools import Approver, ToolExecutor, ToolRegistry
+from harness.tools import Approver, ToolCatalog, ToolExecutor, ToolRegistry
 from llm import ChatModel
 
 
@@ -30,10 +33,17 @@ def build_agent_loop(
         controller: Controller,
         event_bus: EventBus,
         approver: Approver | None = None,
+        subagents: SubagentRegistry | None = None,
 ) -> AgentLoop:
         executor = ToolExecutor(registry, event_bus, approver)
-        reason = ReasonPhase(model, registry.catalog(), event_bus)
-        action = ActionPhase(executor)
+        action: Phase
+        if subagents is not None:
+                catalog = ToolCatalog.of_tools([*registry.tools(), *subagents.all()])
+                action = DelegatingActionPhase(executor, subagents, event_bus)
+        else:
+                catalog = registry.catalog()
+                action = ActionPhase(executor)
+        reason = ReasonPhase(model, catalog, event_bus)
         observation = ObservationPhase(controller, event_bus)
         navigator = Navigator(
                 start=reason,

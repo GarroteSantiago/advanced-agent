@@ -15,6 +15,7 @@ from agent.planning import (
 )
 from agent.progress import ProgressView
 from agent.session import Session
+from agent.subagent import Subagent
 
 __all__ = [
         "ApprovePlan",
@@ -29,4 +30,5 @@ __all__ = [
         "Renderer",
         "RevisePlan",
         "Session",
+        "Subagent",
 ]
