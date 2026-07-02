@@ -7,6 +7,7 @@ then prints an evidence report that maps onto the TP's gradable sections:
   * multi-agent delegation (subagent results in the shared ledger)        -- §1/§2
   * RAG (sources tagged ``rag`` + documents-retrieved events)             -- §3
   * context/loop behaviour (no-progress nudges, partial-findings reports)  -- §4
+  * persistent memory (knowledge recalled/stored across runs of a target)  -- §2/§5
   * observability fields (tokens, latency, cost per model call)            -- §6
 
 Run it from the repository root (so ``.env`` and ``data/rag_index`` resolve):
@@ -45,6 +46,7 @@ from harness.events import (  # noqa: E402
         ToolInvoked,
 )
 from harness.runtime import ExecutionResult  # noqa: E402
+from memory import JsonMemoryStore, ProjectMemory, ProjectMemoryService  # noqa: E402
 
 _DEFAULT_TARGET = "scripts/sample_app"
 
@@ -114,6 +116,19 @@ def _report(renderer: Renderer, result: ExecutionResult, audit: AuditLogger) -> 
         show(result.final_output or "(no answer)")
 
 
+def _memory_report(
+        renderer: Renderer, recalled: ProjectMemory, absorbed: ProjectMemory
+) -> None:
+        show = renderer.show
+        show("\n--- persistent project memory (§2/§5) ---")
+        show(f"  recalled before run: {len(recalled.entries())} entries")
+        show(f"  stored after run:    {len(absorbed.entries())} entries")
+        if recalled.is_empty():
+                show("  (first run for this target — re-run to see the agent briefed from memory)")
+        else:
+                show("  (this run was briefed with prior knowledge; see the seeded system prompt)")
+
+
 def _enable_tracing(session: Session, renderer: Renderer) -> TextIO | None:
         """Attach a trace sink chosen by OBSERVABILITY; return a handle to close.
 
@@ -153,8 +168,20 @@ async def _run(target: str) -> None:
 
         model = main._build_model(renderer)
         retriever = main._build_retriever(renderer)
+
+        # Persistent per-project memory: brief this run from what earlier runs of
+        # the same target learned, then absorb this run back into it afterwards.
+        store = JsonMemoryStore(Path(os.environ.get("MEMORY_DIR", "data/memory")))
+        service = ProjectMemoryService(store)
+        project_id = str(Path(target).resolve())
+        recalled = store.load(project_id)
+
         session, _supervision, _plan, _progress = build_session(
-                model, renderer=renderer, inputer=_SilentInputer(), retriever=retriever
+                model,
+                renderer=renderer,
+                inputer=_SilentInputer(),
+                retriever=retriever,
+                memory_briefing=recalled.brief(),
         )
 
         audit = AuditLogger()
@@ -163,7 +190,9 @@ async def _run(target: str) -> None:
 
         renderer.show(f"\nanalysing: {target}\n")
         result = await session.ask(_task(target))
+        absorbed = service.absorb(project_id, result)
         _report(renderer, result, audit)
+        _memory_report(renderer, recalled, absorbed)
 
         if trace_handle is not None:
                 trace_handle.flush()

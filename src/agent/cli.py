@@ -11,12 +11,15 @@ directly. That keeps the REPL testable with fakes.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from agent.interaction import Inputer, Renderer
 from agent.planning import ApprovePlan, PlanMode, PlanReview, RejectPlan, RevisePlan
 from agent.progress import ProgressView
 from agent.session import Session
 from agent.subagent import Subagent
 from agent.team import build_subagents
+from harness.runtime import ExecutionResult
 from harness.tools import (
         Approver,
         CompositeApprover,
@@ -72,12 +75,15 @@ def build_session(
         inputer: Inputer,
         policy: PolicyConfig | None = None,
         retriever: Retriever | None = None,
+        memory_briefing: str | None = None,
 ) -> tuple[Session, SupervisionPolicy, PlanMode, ProgressView]:
         """Wire the principal coordinator Session with its subagent team, both
         interactive modes (off), and a live progress view subscribed to events.
 
         The principal owns no tools; it delegates to the five subagents. If a
-        ``policy`` is given, its guardrails are checked before supervision.
+        ``policy`` is given, its guardrails are checked before supervision. A
+        ``memory_briefing`` (what earlier sessions learned about this project) is
+        seeded once after the principal's instructions -- see ``ProjectMemory``.
         """
         confirmer = ConsoleConfirmer(inputer)
         supervision = SupervisionPolicy(confirmer)
@@ -86,6 +92,10 @@ def build_session(
         approver: Approver = supervision
         if policy is not None:
                 approver = CompositeApprover([PolicyVerifier(policy, confirmer), supervision])
+
+        system_prompt = PRINCIPAL_PROMPT
+        if memory_briefing:
+                system_prompt = f"{PRINCIPAL_PROMPT}\n\n{memory_briefing}"
 
         # The principal is a coordinator: no direct tools, it works by delegating
         # to the subagent team. Give it tools here if you want it to act directly.
@@ -96,7 +106,7 @@ def build_session(
                 approver=approver,
                 plan_mode=plan_mode,
                 subagents=team,
-                system_prompt=PRINCIPAL_PROMPT,
+                system_prompt=system_prompt,
         )
 
         # Bridge each subagent's private event stream onto the principal bus, so
@@ -120,6 +130,7 @@ async def run_chat(
         progress: ProgressView,
         renderer: Renderer,
         inputer: Inputer,
+        on_result: Callable[[ExecutionResult], None] | None = None,
 ) -> None:
         renderer.show("advanced-agent chat. " + HELP)
         while True:
@@ -151,3 +162,5 @@ async def run_chat(
                 renderer.show("\nagent> " + (result.final_output or "(no answer)"))
                 footer = f"  [{result.metadata.iterations} iteration(s) | {result.stop_reason or 'done'}]"
                 renderer.show(footer)
+                if on_result is not None:
+                        on_result(result)  # e.g. absorb the run into project memory

@@ -11,9 +11,11 @@ from pathlib import Path
 from agent import Session
 from agent.cli import build_session, run_chat
 from agent.interaction import ConsoleInputer, ConsoleRenderer, Renderer
+from harness.runtime import ExecutionResult
 from harness.tools import PolicyConfig
 from llm import ChatModel
 from llm.providers import OpenAIChatModel, OpenAIEmbeddingModel, PlaceholderChatModel
+from memory import JsonMemoryStore, ProjectMemoryService
 from rag import NumpyVectorStore, Retriever
 
 
@@ -70,6 +72,16 @@ def _build_retriever(renderer: Renderer) -> Retriever | None:
         return Retriever(embedder, NumpyVectorStore.load(index_dir))
 
 
+def _build_memory() -> ProjectMemoryService:
+        """The persistent per-project memory service (JSON under ``MEMORY_DIR``).
+
+        The project is identified by the directory the chat is launched from, so
+        knowledge accumulates per working tree across sessions.
+        """
+        directory = Path(os.environ.get("MEMORY_DIR", "data/memory"))
+        return ProjectMemoryService(JsonMemoryStore(directory))
+
+
 def _build_model(renderer: Renderer) -> ChatModel:
         if os.environ.get("OPENAI_API_KEY"):
                 model_name = os.environ.get("MODEL", "gpt-5-nano")
@@ -93,10 +105,26 @@ async def _main() -> None:
 
         model = _build_model(renderer)
         retriever = _build_retriever(renderer)
+
+        memory = _build_memory()
+        project_id = str(Path.cwd().resolve())
+        briefing = memory.briefing(project_id)
+        if briefing:
+                renderer.show("memory: recalled what earlier sessions learned about this project")
+
         session, supervision, plan_mode, progress = build_session(
-                model, renderer=renderer, inputer=inputer, policy=policy, retriever=retriever
+                model,
+                renderer=renderer,
+                inputer=inputer,
+                policy=policy,
+                retriever=retriever,
+                memory_briefing=briefing,
         )
         _enable_observability(session, renderer)
+
+        def _remember(result: ExecutionResult) -> None:
+                memory.absorb(project_id, result)
+
         await run_chat(
                 session,
                 supervision=supervision,
@@ -104,6 +132,7 @@ async def _main() -> None:
                 progress=progress,
                 renderer=renderer,
                 inputer=inputer,
+                on_result=_remember,
         )
 
 
