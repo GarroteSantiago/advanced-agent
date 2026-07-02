@@ -82,6 +82,34 @@ def test_cycle_signature_is_stable_for_equal_action_and_observation():
         assert a.cycle_signature() != _started().cycle_signature()
 
 
+def test_observed_records_the_completed_cycle_signature():
+        call = ToolCall(id="c1", name="echo", arguments={"text": "hi"})
+        result = ToolResult.success(call_id="c1", tool_name="echo", content="hi")
+
+        context = _started().with_assistant(Completion(tool_calls=(call,))).with_tool_results([result])
+        signature = context.cycle_signature()
+
+        observed = context.observed()
+
+        # The signature is captured before observed() clears pending/results.
+        assert tuple(observed.recorded_signatures()) == (signature,)
+        assert observed.cycle_signature() == "=>"  # pending/results now cleared
+
+
+def test_recorded_signatures_accumulate_and_repeat_when_the_cycle_repeats():
+        def one_cycle(ctx: AgentExecutionContext) -> AgentExecutionContext:
+                call = ToolCall(id="c1", name="echo", arguments={"text": "hi"})
+                result = ToolResult.success(call_id="c1", tool_name="echo", content="hi")
+                acted = ctx.with_assistant(Completion(tool_calls=(call,))).with_tool_results([result])
+                return acted.observed()
+
+        context = one_cycle(one_cycle(_started()))
+
+        signatures = tuple(context.recorded_signatures())
+        assert len(signatures) == 2
+        assert signatures[0] == signatures[1]  # identical action+result each cycle
+
+
 def test_stopped_and_aborted_reach_terminal_states():
         stopped = _started().stopped("the answer")
         assert stopped.state() is ExecutionState.COMPLETED

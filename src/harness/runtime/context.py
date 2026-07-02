@@ -31,6 +31,7 @@ class AgentExecutionContext:
         _last_results: tuple[ToolResult, ...] = ()
         _final_output: str | None = None
         _stop_reason: str | None = None
+        _cycle_signatures: tuple[str, ...] = ()
 
         @classmethod
         def for_task(
@@ -87,6 +88,14 @@ class AgentExecutionContext:
                 )
                 return f"{calls}=>{results}"
 
+        def recorded_signatures(self) -> Sequence[str]:
+                """The signature of every cycle closed so far.
+
+                The history a progress tracker reads to notice the agent
+                repeating the same call/result without making progress.
+                """
+                return self._cycle_signatures
+
         # --- transitions (copy-on-write) -----------------------------------
         def with_assistant(self, completion: Completion) -> AgentExecutionContext:
                 # A model turn is one loop pass: it advances the iteration count
@@ -119,6 +128,7 @@ class AgentExecutionContext:
                 return replace(
                         self,
                         _conversation=folded,
+                        _cycle_signatures=(*self._cycle_signatures, self.cycle_signature()),
                         _pending=(),
                         _last_results=(),
                         _state=ExecutionState.OBSERVING,
