@@ -87,7 +87,7 @@ Delegation surfaced as tool calls; routed by `DelegatingActionPhase` (`src/harne
 - [ ] ⚠️ Records **progress** — `progress` field + `noting_progress` transition exist; iteration/token counters live; not yet auto-populated with milestone steps.
 - [x] Records **subagent results** — merged by `DelegatingActionPhase` (`crediting`).
 - [x] Records **sources consulted** — populated live: RAG retrievals flow in as `Origin.RAG` (verified: 35 sources reached the ledger in a live run). Repo/web reads not yet auto-tagged.
-- [ ] ⚠️ Records **modified files** — `modified_files` field + `touching` transition exist; **populated once the write-path→ledger wiring lands**.
+- [x] ✅ Records **modified files** — write-path→ledger wiring landed: a mutating tool reports the files it changed on its `ToolResult.modified`, the action phases fold them into the ledger via `touching_all`, and a subagent drains its ledger's touched files into its report (merged upward). Unit-tested end to end. Not exercised by a live *analyze* run only because no agent in the team is granted `write_file` (a separate permissions decision); the mechanism is complete and correct (a write records; no write records nothing).
 - [ ] ⚠️ Records **relevant observations** — `observations` field + `observing_that` transition exist; auto-population partial.
 
 ### Persistent per-project memory — ✅ DONE (Phase 5, live-verified)
@@ -207,7 +207,7 @@ Unit/integration suite is broad (185 tests). These four are the use-case demos:
 |---|---|
 | Base harness, tools, config & policies | ✅ Done and solid |
 | Multi-agent architecture (5 subagents) | ✅ Done + live-verified (real gpt-5-nano delegates; reports merge into the ledger) |
-| Shared task state (TaskLedger) | ✅ Structure + subagent-result merge done; sources/files fill in with §3 |
+| Shared task state (TaskLedger) | ✅ Structure + subagent-result merge + RAG sources live + `modified_files` auto-populated from the write-path (unit-tested; no agent is granted `write_file` yet, so a live analyze run correctly shows 0) |
 | Observability (external tool) | ✅ Built + wired + OTel boundary smoke-tested; live trace captured (`docs/evidence/`). Phoenix-UI screenshot optional |
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
 | Persistent project memory | ✅ Done (Phase 5): ProjectMemory + JSON store + run-boundary service; live-verified cross-session recall |
