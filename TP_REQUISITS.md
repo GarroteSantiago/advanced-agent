@@ -101,15 +101,15 @@ Framework-level corpus, **FastAPI** (21 curated docs → 275 chunks). Embeddings
 
 ---
 
-## 4. Context handling & agent behavior — mostly ❌ ABSENT (Phase 4)
+## 4. Context handling & agent behavior — ✅ DONE (Phase 4)
 
-- [ ] ❌ Strategy for long conversations/tasks — `ContextManager.prepare()` still an identity pass-through, not wired into the reason phase.
-- [ ] ❌ Summarizes prior info / preserves decisions.
-- [ ] ❌ Avoids sending whole history — full conversation still sent every turn.
-- [ ] ❌ **Loop detection** — only a hard iteration cap; `cycle_signature()` hook still unused.
-- [ ] ⚠️ On loop: change strategy/replan/stop/ask — only hard-cap → `Halt`.
-- [ ] ❌ Insufficient-evidence detection.
-- [ ] ❌ When blocked, explain what was tried / what's missing.
+- [x] Strategy for long conversations/tasks — `ContextManager.prepare()` is wired into the reason phase (`src/harness/loop/phases/reason.py`) as a read-time projection.
+- [ ] ⚠️ Summarizes prior info / preserves decisions — **structural** windowing (leading instructions + original task + recent turns kept, middle elided behind a marker); durable decisions live in the `TaskLedger`. Semantic (model-based) summary via a `Summarizer` port is the noted next seam.
+- [x] Avoids sending whole history — `ContextManager` windows above `max_messages`; the elision boundary never orphans a tool result.
+- [x] **Loop detection** — `ProgressTracker` (`src/harness/control/progress_tracker.py`) over the now-recorded `cycle_signature()` history.
+- [x] On loop: change strategy/replan/stop/ask — **nudge-then-stop**: first repeat folds corrective guidance into the conversation (`StrategyNudged`) and continues; a further repeat aborts.
+- [ ] ⚠️ Insufficient-evidence detection — no *proactive* detector; the closest behavior is the partial-findings synthesis on abort (below).
+- [x] When blocked, explain what was tried / what's missing — `PartialSynthesizer` (`src/agent/synthesis.py`) runs a forced recap turn so a capped/stalled subagent reports findings + blockers, tagged partial.
 
 ---
 
@@ -163,7 +163,7 @@ Unit/integration suite is broad (140 tests). These four are the use-case demos:
 
 - [ ] ⚠️ A task using **RAG** that shows retrieved sources — mechanism live-verified (Researcher retrieved, 35 sources in the ledger); packaged demo/evidence pending.
 - [ ] ❌ A task using **project memory**.
-- [ ] ❌ A task where the agent **changes strategy / stops / asks for help**.
+- [ ] ⚠️ A task where the agent **changes strategy / stops / asks for help** — mechanism now exists (nudge-then-stop + partial-findings synthesis, Phase 4); packaged end-to-end demo/evidence still pending.
 - [ ] ❌ At least one execution **recorded in the observability tool** (adapter ready; run pending).
 
 ---
@@ -197,5 +197,5 @@ Unit/integration suite is broad (140 tests). These four are the use-case demos:
 | Observability (external tool) | ⚠️ Built + opt-in wired; live trace/screenshot pending |
 | RAG (chunk/embed/vector/retrieval) | ✅ Done + live-verified (FastAPI corpus; sources reach the ledger) |
 | Persistent project memory | ❌ Not started (Phase 5) |
-| Context/loop management | ❌ Stubs only (Phase 4) |
+| Context/loop management | ✅ Done (Phase 4): windowing wired, no-progress detection (nudge-then-stop), partial-findings on abort |
 | Use case + evidence + deliverable docs | ⚠️ Use case decided; evidence/docs pending |
