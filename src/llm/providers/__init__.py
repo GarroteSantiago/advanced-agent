@@ -4,7 +4,8 @@
 keyless stand-in used when no provider is configured.
 """
 
+from llm.providers.openai_embedding_model import OpenAIEmbeddingModel
 from llm.providers.openai_model import OpenAIChatModel
 from llm.providers.placeholder import PlaceholderChatModel
 
-__all__ = ["OpenAIChatModel", "PlaceholderChatModel"]
+__all__ = ["OpenAIChatModel", "OpenAIEmbeddingModel", "PlaceholderChatModel"]

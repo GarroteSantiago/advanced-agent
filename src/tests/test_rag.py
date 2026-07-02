@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from rag import Chunker, Indexer, NumpyVectorStore, Retriever
+from rag import Chunker, Indexer, NumpyVectorStore, Retriever, gather_documents
 
 # A tiny fixed vocabulary lets a fake embedder produce deterministic vectors so
 # similarity is meaningful without a real model.
@@ -65,3 +65,14 @@ async def test_store_persists_and_reloads(tmp_path) -> None:
         results = Retriever(FakeEmbeddingModel(), reloaded)
         found = await results.retrieve("widget", k=1)
         assert found[0].chunk.source == "widget.md"
+
+
+def test_gather_documents_reads_supported_files(tmp_path) -> None:
+        (tmp_path / "a.md").write_text("alpha", encoding="utf-8")
+        (tmp_path / "nested").mkdir()
+        (tmp_path / "nested" / "b.txt").write_text("beta", encoding="utf-8")
+        (tmp_path / "ignore.png").write_bytes(b"\x89PNG")
+
+        docs = dict(gather_documents(tmp_path))
+
+        assert docs == {"a.md": "alpha", "nested/b.txt": "beta"}
