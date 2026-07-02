@@ -71,7 +71,10 @@ class PhoenixTracer:
                                 )
                         case ToolObserved():
                                 self._close_tool_span(event)
-                        case LoopStopped():
+                        case LoopStopped() if event.source == "":
+                                # Only the principal's stop ends the run root; a
+                                # subagent's stop (forwarded, source-tagged) must not,
+                                # or its activity would fall outside the run tree.
                                 self._close_root(event)
                         case _:
                                 pass

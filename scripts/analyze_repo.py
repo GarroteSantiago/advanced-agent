@@ -23,9 +23,11 @@ Note: model/env/RAG wiring is reused from ``main`` rather than duplicated; the
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import TextIO
 
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT))
@@ -33,6 +35,7 @@ sys.path.insert(0, str(_ROOT))
 import main  # noqa: E402
 from agent.cli import build_session  # noqa: E402
 from agent.interaction import ConsoleRenderer, Renderer  # noqa: E402
+from agent.session import Session  # noqa: E402
 from harness.events import (  # noqa: E402
         AuditLogger,
         DocumentsRetrieved,
@@ -111,6 +114,39 @@ def _report(renderer: Renderer, result: ExecutionResult, audit: AuditLogger) -> 
         show(result.final_output or "(no answer)")
 
 
+def _enable_tracing(session: Session, renderer: Renderer) -> TextIO | None:
+        """Attach a trace sink chosen by OBSERVABILITY; return a handle to close.
+
+        ``phoenix`` launches the local Phoenix UI (screenshot it for §9.7).
+        ``otel-file`` writes the same spans as JSON lines to OTEL_TRACE_FILE --
+        a durable, headless-friendly trace artifact. Anything else: no tracing.
+        """
+        mode = os.environ.get("OBSERVABILITY", "").lower()
+        if mode == "phoenix":
+                from observability.phoenix import launch_phoenix_tracer
+
+                session.events.subscribe(launch_phoenix_tracer())
+                renderer.show("observability: Phoenix UI launched (screenshot it for evidence)")
+                return None
+        if mode in ("otel-file", "file"):
+                from opentelemetry.sdk.trace import TracerProvider
+                from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+
+                from observability.phoenix import PhoenixTracer
+
+                path = os.environ.get("OTEL_TRACE_FILE", "otel-trace.jsonl")
+                # Kept open across the run; closed by the caller after the report.
+                handle = Path(path).open("w", encoding="utf-8")  # noqa: SIM115
+                provider = TracerProvider()
+                # One compact span per line (JSONL), not the default pretty print.
+                exporter = ConsoleSpanExporter(out=handle, formatter=lambda s: s.to_json(indent=None) + "\n")
+                provider.add_span_processor(SimpleSpanProcessor(exporter))
+                session.events.subscribe(PhoenixTracer(provider.get_tracer("advanced-agent")))
+                renderer.show(f"observability: OTel spans -> {path}")
+                return handle
+        return None
+
+
 async def _run(target: str) -> None:
         main._load_dotenv()
         renderer = ConsoleRenderer()
@@ -123,10 +159,15 @@ async def _run(target: str) -> None:
 
         audit = AuditLogger()
         session.events.subscribe(audit)
+        trace_handle = _enable_tracing(session, renderer)
 
         renderer.show(f"\nanalysing: {target}\n")
         result = await session.ask(_task(target))
         _report(renderer, result, audit)
+
+        if trace_handle is not None:
+                trace_handle.flush()
+                trace_handle.close()
 
 
 def main_() -> None:

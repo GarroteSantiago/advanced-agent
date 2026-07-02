@@ -82,3 +82,26 @@ def test_boundary_emits_nested_llm_and_tool_spans_with_attributes() -> None:
         # Both the model and tool spans nest under the single run root.
         assert llm.parent.span_id == root.context.span_id
         assert tool.parent.span_id == root.context.span_id
+
+
+def test_a_subagent_stop_does_not_close_the_principal_run_root() -> None:
+        # Subagent stops are forwarded source-tagged; only the principal's
+        # (source="") stop may close the run root, else its spans would
+        # escape the tree and a second root would open for later work.
+        tracer, exporter = _tracer()
+        tracer.handle(ModelCalled(message_count=1, offered_tools=1, model="gpt-5-nano"))
+        tracer.handle(
+                ModelCompleted(
+                        model="gpt-5-nano",
+                        prompt_tokens=1,
+                        completion_tokens=1,
+                        latency_ms=1.0,
+                        cost_usd=0.0,
+                )
+        )
+        tracer.handle(LoopStopped(reason="subagent done", output="partial", source="explore"))
+        assert not [s for s in exporter.get_finished_spans() if s.name == "agent.run"]
+
+        tracer.handle(LoopStopped(reason="done", output="final"))
+        roots = [s for s in exporter.get_finished_spans() if s.name == "agent.run"]
+        assert len(roots) == 1
