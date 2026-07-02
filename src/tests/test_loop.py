@@ -11,6 +11,7 @@ from harness.events import (
         EventBus,
         LoopStopped,
         ModelCalled,
+        ModelCompleted,
         ToolInvoked,
         ToolObserved,
 )
@@ -86,6 +87,41 @@ async def test_full_react_cycle_runs_tool_then_answers():
         assert ToolObserved in kinds
         assert CycleCompleted in kinds
         assert kinds[-1] is LoopStopped
+
+
+async def test_model_completed_event_carries_model_tokens_latency_and_cost():
+        model = FakeChatModel([Completion(content="done")])
+        loop, audit, _ = _wire(model)
+
+        await loop.run(_context())
+
+        completed = [e for e in audit.records() if isinstance(e, ModelCompleted)]
+        assert len(completed) == 1
+        event = completed[0]
+        assert event.model == "fake-model"
+        assert event.output == "done"
+        assert event.latency_ms >= 0.0
+        assert event.cost_usd == 0.0  # fake-model is not in the price table
+
+        called = [e for e in audit.records() if isinstance(e, ModelCalled)]
+        assert called[0].model == "fake-model"
+
+
+async def test_failing_tool_reports_the_error_on_the_observation_event():
+        model = FakeChatModel(
+                [
+                        Completion(tool_calls=(ToolCall(id="c1", name="ghost", arguments={}),)),
+                        Completion(content="handled"),
+                ]
+        )
+        loop, audit, _ = _wire(model)
+
+        await loop.run(_context())
+
+        observed = [e for e in audit.records() if isinstance(e, ToolObserved)]
+        assert observed[0].ok is False
+        assert observed[0].error is not None
+        assert "ghost" in observed[0].error
 
 
 async def test_answer_without_tools_stops_immediately():

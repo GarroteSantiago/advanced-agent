@@ -39,6 +39,17 @@ class PhaseCompleted(Event):
 class ModelCalled(Event):
         message_count: int
         offered_tools: int
+        model: str = ""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ModelCompleted(Event):
+        model: str
+        prompt_tokens: int
+        completion_tokens: int
+        latency_ms: float
+        cost_usd: float
+        output: str = ""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53,6 +64,7 @@ class ToolObserved(Event):
         tool_name: str
         call_id: str
         ok: bool
+        error: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

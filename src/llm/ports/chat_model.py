@@ -24,6 +24,10 @@ class ChatModel(Protocol):
         or to emit ``tool_calls`` on the returned ``Completion``.
         """
 
+        def identifier(self) -> str:
+                """The model's own name (e.g. ``gpt-5-nano``), for observability."""
+                ...
+
         async def complete(
                 self,
                 conversation: Conversation,

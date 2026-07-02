@@ -13,6 +13,7 @@ from llm.messages import (
         ToolSchema,
 )
 from llm.ports import ChatModel
+from llm.pricing import estimate_cost
 
 __all__ = [
         "ChatModel",
@@ -23,4 +24,5 @@ __all__ = [
         "TokenUsage",
         "ToolCall",
         "ToolSchema",
+        "estimate_cost",
 ]

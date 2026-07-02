@@ -98,6 +98,9 @@ class OpenAIChatModel:
                 self._model = model
                 self._client = AsyncOpenAI(api_key=api_key)
 
+        def identifier(self) -> str:
+                return self._model
+
         async def complete(
                 self,
                 conversation: Conversation,

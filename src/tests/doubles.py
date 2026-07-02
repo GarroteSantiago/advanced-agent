@@ -43,6 +43,9 @@ class FakeChatModel:
                 self._scripted: list[Completion] = list(completions)
                 self.calls: list[tuple[Conversation, Sequence[ToolSchema] | None]] = []
 
+        def identifier(self) -> str:
+                return "fake-model"
+
         async def complete(
                 self,
                 conversation: Conversation,
