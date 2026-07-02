@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 
+from harness.runtime.ledger import Source, SubagentResult, TaskLedger
 from harness.runtime.metadata import ExecutionMetadata
 from harness.runtime.state import ExecutionState
 from harness.tools import ToolResult
@@ -24,6 +25,7 @@ class AgentExecutionContext:
 
         _conversation: Conversation
         _metadata: ExecutionMetadata
+        _ledger: TaskLedger
         _state: ExecutionState = ExecutionState.IDLE
         _pending: tuple[ToolCall, ...] = ()
         _last_results: tuple[ToolResult, ...] = ()
@@ -31,8 +33,18 @@ class AgentExecutionContext:
         _stop_reason: str | None = None
 
         @classmethod
-        def for_task(cls, task_id: str, conversation: Conversation) -> AgentExecutionContext:
-                return cls(_conversation=conversation, _metadata=ExecutionMetadata(task_id=task_id))
+        def for_task(
+                cls,
+                task_id: str,
+                conversation: Conversation,
+                *,
+                request: str = "",
+        ) -> AgentExecutionContext:
+                return cls(
+                        _conversation=conversation,
+                        _metadata=ExecutionMetadata(task_id=task_id),
+                        _ledger=TaskLedger.for_request(request),
+                )
 
         # --- queries -------------------------------------------------------
         def current_conversation(self) -> Conversation:
@@ -49,6 +61,9 @@ class AgentExecutionContext:
 
         def metadata(self) -> ExecutionMetadata:
                 return self._metadata
+
+        def ledger(self) -> TaskLedger:
+                return self._ledger
 
         def final_output(self) -> str | None:
                 return self._final_output
@@ -119,3 +134,19 @@ class AgentExecutionContext:
 
         def aborted(self, reason: str = "") -> AgentExecutionContext:
                 return replace(self, _state=ExecutionState.ABORTED, _stop_reason=reason or None)
+
+        # --- ledger transitions (delegate to the shared task state) ---------
+        def noting_progress(self, note: str) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_progress(note))
+
+        def crediting(self, result: SubagentResult) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_subagent_result(result))
+
+        def consulting(self, source: Source) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_source(source))
+
+        def touching(self, path: str) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_modified_file(path))
+
+        def observing_that(self, note: str) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_observation(note))

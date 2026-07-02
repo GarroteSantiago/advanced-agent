@@ -67,7 +67,7 @@ class Session:
                         approved = await self._plan_mode.negotiate(self._model, self._conversation)
                         if approved is None:
                                 rejected = AgentExecutionContext.for_task(
-                                        task_id, self._conversation
+                                        task_id, self._conversation, request=message
                                 ).aborted("user rejected the plan")
                                 return ExecutionResult.from_context(rejected)
                         self._conversation = approved
@@ -80,7 +80,7 @@ class Session:
                         approver=self._approver,
                 )
                 result = await loop.run(
-                        AgentExecutionContext.for_task(task_id, self._conversation)
+                        AgentExecutionContext.for_task(task_id, self._conversation, request=message)
                 )
                 self._conversation = result.conversation  # persist history across turns
                 return result

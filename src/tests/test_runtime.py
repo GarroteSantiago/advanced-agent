@@ -5,6 +5,8 @@ from harness.runtime import (
         ExecutionMetadata,
         ExecutionResult,
         ExecutionState,
+        Source,
+        SubagentResult,
 )
 from harness.tools import ToolResult
 from llm import Completion, Conversation, Message, Role, TokenUsage, ToolCall
@@ -12,7 +14,7 @@ from llm import Completion, Conversation, Message, Role, TokenUsage, ToolCall
 
 def _started() -> AgentExecutionContext:
         convo = Conversation.of([Message.user("do the thing")])
-        return AgentExecutionContext.for_task("t-1", convo)
+        return AgentExecutionContext.for_task("t-1", convo, request="do the thing")
 
 
 def test_metadata_increments_and_accumulates_usage_without_mutation():
@@ -104,3 +106,30 @@ def test_execution_result_from_aborted_context_is_not_success():
         result = ExecutionResult.from_context(_started().aborted(), stop_reason="iteration cap")
         assert not result.succeeded()
         assert result.state is ExecutionState.ABORTED
+
+
+def test_for_task_seeds_the_ledger_with_the_original_request():
+        assert _started().ledger().original_request() == "do the thing"
+
+
+def test_ledger_transitions_are_copy_on_write_through_the_context():
+        base = _started()
+
+        grown = (
+                base.observing_that("found a router")
+                .touching("src/app.py")
+                .consulting(Source.from_rag("fastapi/routing"))
+                .crediting(SubagentResult.completed("Explorer", "mapped the tree"))
+                .noting_progress("explored the tree")
+        )
+
+        # original context untouched
+        assert base.ledger().observations() == ()
+        assert base.ledger().modified_files() == ()
+
+        ledger = grown.ledger()
+        assert ledger.observations() == ("found a router",)
+        assert ledger.modified_files() == ("src/app.py",)
+        assert tuple(s.reference for s in ledger.sources_consulted()) == ("fastapi/routing",)
+        assert tuple(r.agent for r in ledger.subagent_results()) == ("Explorer",)
+        assert ledger.progress() == ("explored the tree",)

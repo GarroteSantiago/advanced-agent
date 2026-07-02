@@ -56,7 +56,7 @@ class Harness:
                         event_bus=self._bus,
                 )
                 return await loop.run(
-                        AgentExecutionContext.for_task(task_id, self._seed(task))
+                        AgentExecutionContext.for_task(task_id, self._seed(task), request=task)
                 )
 
         def _seed(self, task: str) -> Conversation:
