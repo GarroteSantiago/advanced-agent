@@ -7,7 +7,7 @@ rerouting the graph happens here.
 
 from __future__ import annotations
 
-from harness.control import Controller
+from harness.control import Controller, ProgressTracker
 from harness.delegation import SubagentRegistry
 from harness.events import EventBus
 from harness.loop import (
@@ -34,6 +34,7 @@ def build_agent_loop(
         event_bus: EventBus,
         approver: Approver | None = None,
         subagents: SubagentRegistry | None = None,
+        progress_tracker: ProgressTracker | None = None,
 ) -> AgentLoop:
         executor = ToolExecutor(registry, event_bus, approver)
         action: Phase
@@ -44,7 +45,9 @@ def build_agent_loop(
                 catalog = registry.catalog()
                 action = ActionPhase(executor)
         reason = ReasonPhase(model, catalog, event_bus)
-        observation = ObservationPhase(controller, event_bus)
+        observation = ObservationPhase(
+                controller, event_bus, progress_tracker or ProgressTracker()
+        )
         navigator = Navigator(
                 start=reason,
                 transitions={

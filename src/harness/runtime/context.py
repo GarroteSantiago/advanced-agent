@@ -145,6 +145,19 @@ class AgentExecutionContext:
         def aborted(self, reason: str = "") -> AgentExecutionContext:
                 return replace(self, _state=ExecutionState.ABORTED, _stop_reason=reason or None)
 
+        def advised(self, note: str) -> AgentExecutionContext:
+                """Fold harness steering into the conversation (loop-break guidance).
+
+                Injected as a user-role message so the next reason turn reads it as
+                feedback. The harness speaks here, not the human, but user-role is
+                the portable way to steer a chat model mid-run.
+                """
+                return replace(
+                        self,
+                        _conversation=self._conversation.with_message(Message.user(note)),
+                        _state=ExecutionState.OBSERVING,
+                )
+
         # --- ledger transitions (delegate to the shared task state) ---------
         def noting_progress(self, note: str) -> AgentExecutionContext:
                 return replace(self, _ledger=self._ledger.with_progress(note))

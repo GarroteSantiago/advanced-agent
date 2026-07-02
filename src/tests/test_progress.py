@@ -5,6 +5,7 @@ from harness.events import (
         GuardTripped,
         ModelCalled,
         PhaseStarted,
+        StrategyNudged,
         ToolInvoked,
         ToolObserved,
 )
@@ -25,6 +26,14 @@ def test_shows_model_tool_and_guard_activity():
         assert "→ read_file(path=x.py)" in text
         assert "✓ read_file" in text
         assert "iteration cap reached" in text
+
+
+def test_shows_a_strategy_nudge_always():
+        renderer = FakeRenderer()
+        ProgressView(renderer, verbose=False).handle(
+                StrategyNudged(reason="repeated 2 times", occurrences=2)
+        )
+        assert any("nudging" in line for line in renderer.lines)
 
 
 def test_failed_tool_shows_a_cross():

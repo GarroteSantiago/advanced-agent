@@ -4,14 +4,17 @@ Driven entirely by a scripted ``FakeChatModel`` and the ``EchoTool`` -- no real
 model or network.
 """
 
+from harness.assembly import build_agent_loop
 from harness.control import Controller, IterationLimiter
 from harness.events import (
         AuditLogger,
         CycleCompleted,
         EventBus,
+        GuardTripped,
         LoopStopped,
         ModelCalled,
         ModelCompleted,
+        StrategyNudged,
         ToolInvoked,
         ToolObserved,
 )
@@ -164,6 +167,44 @@ async def test_iteration_cap_aborts_a_non_converging_run():
         assert result.state is ExecutionState.ABORTED
         assert result.metadata.iterations == 2
         assert "iteration cap" in (result.stop_reason or "")
+
+
+async def test_progress_tracker_nudges_then_stops_a_repeating_model():
+        # The model keeps asking for the same call with the same arguments; the
+        # tracker (default-on in the real assembly) should intervene well before
+        # the far-off iteration cap.
+        repeat = Completion(tool_calls=(ToolCall(id="c1", name="echo", arguments={"text": "loop"}),))
+        model = FakeChatModel([repeat, repeat, repeat])
+
+        bus = EventBus()
+        audit = AuditLogger()
+        bus.subscribe(audit)
+        registry = ToolRegistry()
+        registry.register(EchoTool())
+        loop = build_agent_loop(
+                model=model,
+                registry=registry,
+                controller=Controller([IterationLimiter(max_iterations=20)]),
+                event_bus=bus,
+        )
+
+        result = await loop.run(_context())
+
+        assert result.state is ExecutionState.ABORTED
+        assert "progress-tracker" in (result.stop_reason or "")
+        assert result.metadata.iterations < 20  # stopped for stalling, not the hard cap
+
+        kinds = [type(e) for e in audit.records()]
+        assert StrategyNudged in kinds  # nudged on the first repeat
+        assert GuardTripped in kinds  # then stopped on the next
+
+        # The corrective guidance was folded into the conversation as feedback.
+        nudges = [
+                m
+                for m in result.conversation.messages()
+                if m.role is Role.USER and "repeated the same action" in m.content
+        ]
+        assert len(nudges) == 1
 
 
 async def test_step_runs_a_single_phase_and_reports_its_outcome():

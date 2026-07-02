@@ -12,6 +12,7 @@ from harness.events.event import (
         ModelCompleted,
         PhaseCompleted,
         PhaseStarted,
+        StrategyNudged,
         ToolInvoked,
         ToolObserved,
 )
@@ -30,6 +31,7 @@ __all__ = [
         "ModelCompleted",
         "PhaseCompleted",
         "PhaseStarted",
+        "StrategyNudged",
         "Subscription",
         "ToolInvoked",
         "ToolObserved",

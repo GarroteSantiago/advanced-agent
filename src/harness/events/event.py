@@ -88,3 +88,11 @@ class LoopStopped(Event):
 class GuardTripped(Event):
         guard: str
         reason: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class StrategyNudged(Event):
+        """A no-progress loop was detected and corrective guidance was injected."""
+
+        reason: str
+        occurrences: int
