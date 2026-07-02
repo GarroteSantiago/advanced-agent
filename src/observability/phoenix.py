@@ -16,8 +16,11 @@ extra); the composition root imports it only when observability is enabled.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import cast
 
+from opentelemetry.context import Context
 from opentelemetry.trace import Span, Tracer, set_span_in_context
+from opentelemetry.util.types import AttributeValue
 
 from harness.events import (
         Event,
@@ -40,7 +43,7 @@ class PhoenixTracer:
         def __init__(self, tracer: Tracer) -> None:
                 self._tracer = tracer
                 self._root: Span | None = None
-                self._root_ctx: object | None = None
+                self._root_ctx: Context | None = None
                 self._pending_call: ModelCalled | None = None
                 self._llm_span: Span | None = None
                 self._tools: dict[str, tuple[ToolInvoked, Span]] = {}
@@ -80,6 +83,7 @@ class PhoenixTracer:
                         "agent.run", start_time=_nanos(event.occurred_at)
                 )
                 root.set_attribute(SPAN_KIND, "CHAIN")
+                root.set_attribute("agent.name", "principal")
                 self._root = root
                 self._root_ctx = set_span_in_context(root)
 
@@ -110,7 +114,7 @@ class PhoenixTracer:
 
 def _apply(span: Span, data: SpanData) -> None:
         for key, value in data.attributes.items():
-                span.set_attribute(key, value)
+                span.set_attribute(key, cast(AttributeValue, value))
 
 
 def launch_phoenix_tracer(project_name: str = "advanced-agent") -> PhoenixTracer:
@@ -123,4 +127,4 @@ def launch_phoenix_tracer(project_name: str = "advanced-agent") -> PhoenixTracer
 
         px.launch_app()
         provider = register(project_name=project_name)
-        return PhoenixTracer(provider.get_tracer(project_name))
+        return PhoenixTracer(cast(Tracer, provider.get_tracer(project_name)))

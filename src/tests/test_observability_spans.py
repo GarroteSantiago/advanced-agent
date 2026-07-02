@@ -27,6 +27,24 @@ def test_llm_span_carries_model_tokens_latency_and_cost() -> None:
         assert span.attributes["llm.latency_ms"] == 42.0
         assert span.attributes["llm.cost.total_usd"] == 0.001
         assert span.attributes["output.value"] == "the answer"
+        assert span.attributes["agent.name"] == "principal"  # empty source == principal
+
+
+def test_spans_attribute_forwarded_events_to_their_subagent() -> None:
+        called = ModelCalled(message_count=1, offered_tools=0, model="gpt-5-nano", source="research")
+        completed = ModelCompleted(
+                model="gpt-5-nano",
+                prompt_tokens=1,
+                completion_tokens=1,
+                latency_ms=1.0,
+                cost_usd=0.0,
+                source="research",
+        )
+        invoked = ToolInvoked(tool_name="rag_search", call_id="c1", arguments={}, source="research")
+        observed = ToolObserved(tool_name="rag_search", call_id="c1", ok=True, source="research")
+
+        assert llm_span(called, completed).attributes["agent.name"] == "research"
+        assert tool_span(invoked, observed).attributes["agent.name"] == "research"
 
 
 def test_tool_span_records_name_input_and_success() -> None:

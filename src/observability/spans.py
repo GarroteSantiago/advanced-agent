@@ -28,12 +28,18 @@ class SpanData:
         attributes: Mapping[str, object]
 
 
+def _agent(source: str) -> str:
+        """The emitting agent's name; empty source is the principal coordinator."""
+        return source or "principal"
+
+
 def llm_span(called: ModelCalled, completed: ModelCompleted) -> SpanData:
         total = completed.prompt_tokens + completed.completion_tokens
         return SpanData(
                 name=f"llm {completed.model}",
                 attributes={
                         SPAN_KIND: "LLM",
+                        "agent.name": _agent(completed.source),
                         "llm.model_name": completed.model,
                         "llm.token_count.prompt": completed.prompt_tokens,
                         "llm.token_count.completion": completed.completion_tokens,
@@ -49,6 +55,7 @@ def llm_span(called: ModelCalled, completed: ModelCompleted) -> SpanData:
 def tool_span(invoked: ToolInvoked, observed: ToolObserved) -> SpanData:
         attributes: dict[str, object] = {
                 SPAN_KIND: "TOOL",
+                "agent.name": _agent(invoked.source),
                 "tool.name": invoked.tool_name,
                 "tool.call_id": invoked.call_id,
                 "input.value": _stringify(invoked.arguments),
