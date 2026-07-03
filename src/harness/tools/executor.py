@@ -41,7 +41,12 @@ class ToolExecutor:
                 )
                 result = await self._run(call)
                 self._bus.publish(
-                        ToolObserved(tool_name=call.name, call_id=call.id, ok=result.ok)
+                        ToolObserved(
+                                tool_name=call.name,
+                                call_id=call.id,
+                                ok=result.ok,
+                                error=result.error,
+                        )
                 )
                 return result
 

@@ -11,10 +11,15 @@ directly. That keeps the REPL testable with fakes.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from agent.interaction import Inputer, Renderer
 from agent.planning import ApprovePlan, PlanMode, PlanReview, RejectPlan, RevisePlan
 from agent.progress import ProgressView
 from agent.session import Session
+from agent.subagent import Subagent
+from agent.team import build_subagents
+from harness.runtime import ExecutionResult
 from harness.tools import (
         Approver,
         CompositeApprover,
@@ -22,25 +27,14 @@ from harness.tools import (
         PolicyVerifier,
         SupervisionPolicy,
 )
-from harness.tools.adapters import (
-        ListFilesTool,
-        ReadFileTool,
-        RunCommandTool,
-        WebSearchTool,
-        WriteFileTool,
-)
 from harness.tools.request import ToolRequest
 from llm import ChatModel
+from prompts import PRINCIPAL_PROMPT
+from rag import Retriever
 
 HELP = (
         "commands: /plan (toggle plan mode), /supervise (toggle supervision), "
         "/verbose (toggle detail), /help, /exit"
-)
-
-SYSTEM_PROMPT = (
-        "You are a coding agent. Use the available tools to inspect and modify the "
-        "project, run commands, and search the web. When the task is done, answer "
-        "without calling tools."
 )
 
 
@@ -80,11 +74,18 @@ def build_session(
         renderer: Renderer,
         inputer: Inputer,
         policy: PolicyConfig | None = None,
+        retriever: Retriever | None = None,
+        memory_briefing: str | None = None,
 ) -> tuple[Session, SupervisionPolicy, PlanMode, ProgressView]:
-        """Wire a Session with all five tools, both interactive modes (off), and
-        a live progress view subscribed to the session's events.
+        """Wire the principal coordinator Session with its subagent team, both
+        interactive modes (off), and a live progress view subscribed to events.
 
-        If a ``policy`` is given, its guardrails are checked before supervision.
+        The principal owns no tools; it delegates to the five analysis subagents.
+        If a ``policy`` is given, its guardrails are checked before supervision. A
+        ``memory_briefing`` (what earlier sessions learned about this project) is
+        seeded once after the principal's instructions -- see ``ProjectMemory``.
+        The Scribe is a separate run-boundary writer (see ``Documenter``), not a
+        principal delegate.
         """
         confirmer = ConsoleConfirmer(inputer)
         supervision = SupervisionPolicy(confirmer)
@@ -94,19 +95,29 @@ def build_session(
         if policy is not None:
                 approver = CompositeApprover([PolicyVerifier(policy, confirmer), supervision])
 
+        system_prompt = PRINCIPAL_PROMPT
+        if memory_briefing:
+                system_prompt = f"{PRINCIPAL_PROMPT}\n\n{memory_briefing}"
+
+        # The principal is a coordinator: no direct tools, it works by delegating
+        # to the subagent team. Give it tools here if you want it to act directly.
+        team = build_subagents(model, approver, retriever)
         session = Session(
                 model,
-                tools=[
-                        ReadFileTool(),
-                        WriteFileTool(),
-                        RunCommandTool(),
-                        ListFilesTool(),
-                        WebSearchTool(),
-                ],
+                tools=[],
                 approver=approver,
                 plan_mode=plan_mode,
-                system_prompt=SYSTEM_PROMPT,
+                subagents=team,
+                system_prompt=system_prompt,
         )
+
+        # Bridge each subagent's private event stream onto the principal bus, so
+        # audit/observability see the whole run (subagent model calls, retrievals,
+        # nudges, stops), each event tagged with its emitting agent. Bridging is a
+        # Subagent capability, not part of the Delegate port -- narrow to it here.
+        for delegate in team.all():
+                if isinstance(delegate, Subagent):
+                        delegate.forward_events_to(session.events)
 
         progress = ProgressView(renderer)
         session.events.subscribe(progress)
@@ -121,6 +132,7 @@ async def run_chat(
         progress: ProgressView,
         renderer: Renderer,
         inputer: Inputer,
+        on_result: Callable[[ExecutionResult], None] | None = None,
 ) -> None:
         renderer.show("advanced-agent chat. " + HELP)
         while True:
@@ -152,3 +164,5 @@ async def run_chat(
                 renderer.show("\nagent> " + (result.final_output or "(no answer)"))
                 footer = f"  [{result.metadata.iterations} iteration(s) | {result.stop_reason or 'done'}]"
                 renderer.show(footer)
+                if on_result is not None:
+                        on_result(result)  # e.g. absorb the run into project memory

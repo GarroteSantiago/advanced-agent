@@ -1,74 +1,112 @@
 # advanced-agent
 
-A Python project scaffold managed with [`uv`](https://docs.astral.sh/uv/) and
-orchestrated through [`just`](https://github.com/casey/just).
+A coding-agent **harness** evolved into a fuller system — multi-agent delegation,
+RAG, persistent per-project memory, context/loop management, config-driven
+security policies, and observability — built **without any orchestration
+framework** (no LangChain/LangGraph). Core dependencies are just `openai` and
+`tavily-python`, plus an optional observability extra.
 
-- **Python:** 3.11.9 (pinned via `.python-version`, required `>=3.11.9`)
-- **Package manager:** `uv`
-- **Task runner:** `just`
+The delivered use case: **analyze an unknown FastAPI repository** and produce a
+verifiable report (architecture, dependencies, risks, commands), writing the
+findings to a documentation folder. See [`docs/use-case.md`](docs/use-case.md).
 
-## Developer artifacts
+- **Python:** 3.11.9 (pinned via `.python-version`) · **Package manager:** `uv` · **Task runner:** `just`
 
-All developer tasks are exposed as `just` recipes (see `justfile`). Each one
-wraps a tool through `uv run`, so no manual environment activation is needed.
+## Documentation
 
-| Recipe          | Command                               | Purpose                                            |
-| --------------- | ------------------------------------- | -------------------------------------------------- |
-| `just run`      | `uv run python main.py`               | Run the application entry point (`main.py`).       |
-| `just test`     | `uv run pytest`                       | Run the test suite (`src/tests/`).                 |
-| `just lint`     | `uv run ruff check --fix .`           | Lint and auto-fix with Ruff.                       |
-| `just format`   | `uv run ruff format .`                | Format the codebase with Ruff.                     |
-| `just type`     | `uv run pyright`                      | Static type-check with Pyright.                    |
-| `just validate` | `just lint && just type && just test` | Full gate: lint, type-check, then test.            |
+| Doc | What it covers |
+| --- | --- |
+| [`docs/architecture.md`](docs/architecture.md) | Onion layers, the loop/navigator/phases, delegation, control, RAG, memory, observability, the Scribe. |
+| [`docs/diagrams/`](docs/diagrams/) | PlantUML: ownership, runtime collaboration, one ReAct turn. |
+| [`docs/use-case.md`](docs/use-case.md) | The concrete objective, the team, success criteria. |
+| [`docs/rag-base.md`](docs/rag-base.md) | The RAG corpus, pipeline, and how to build the index. |
+| [`docs/evidence/`](docs/evidence/) | Live-run evidence: executed-task demos + an OpenTelemetry trace. |
+| [`docs/reproduce.md`](docs/reproduce.md) | Step-by-step: regenerate every generated deliverable (index, evidence, trace). |
+| [`docs/reflection.md`](docs/reflection.md) | What worked, what was hard, honest limitations. |
 
-### Underlying tools
-
-- **Ruff** — linter + formatter (config in `pyproject.toml`; line length 110,
-  curated rule set, double quotes).
-- **Pyright** — static type checker.
-- **pytest** — test framework.
-
-## Project layout
-
-```
-.
-├── main.py                  # Application entry point
-├── justfile                 # Developer task recipes
-├── pyproject.toml           # Project metadata + tool config (ruff)
-├── uv.lock                  # Locked dependency graph
-├── .python-version          # Pinned Python (3.11.9)
-└── src/
-    ├── advanced_agent/      # Package source
-    └── tests/               # Test suite
-```
-
-## Installation
+## Install
 
 Requires [`uv`](https://docs.astral.sh/uv/getting-started/installation/) and
 [`just`](https://github.com/casey/just#installation).
 
 ```sh
-# 1. Clone
 git clone <repository-url>
 cd advanced-agent
-
-# 2. Create the virtualenv and install all (incl. dev) dependencies
-uv sync
+uv sync                          # core install (provisions Python 3.11.9)
+uv sync --extra observability    # optional: adds Phoenix/OpenTelemetry
 ```
 
-`uv sync` provisions Python 3.11.9 if needed and installs the locked
-dependency set from `uv.lock`.
+## Configure
 
-## Running
+Copy `.env.sample` to `.env` and fill in what you need (`.env` is gitignored):
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | Enables the OpenAI provider (else a placeholder model). | — |
+| `MODEL` | Chat model. | `gpt-5-nano` |
+| `TAVILY_API_KEY` | Enables the `web_search` tool. | — |
+| `EMBED_MODEL` | Embedding model for RAG. | `text-embedding-3-small` |
+| `RAG_INDEX_DIR` | Persisted vector index location. | `data/rag_index` |
+| `MEMORY_DIR` | Per-project memory store. | `data/memory` |
+| `DOCS_DIR` | Folder the Scribe writes results into (it is confined here). | `docs/analysis` |
+| `OBSERVABILITY` | `phoenix` (UI) or `otel-file` (JSONL) — else off. | off |
+| `OTEL_TRACE_FILE` | Trace output for `otel-file` mode. | `otel-trace.jsonl` |
+
+## Run
+
+### Interactive chat
 
 ```sh
-just run        # or: uv run python main.py
+just run          # or: uv run python main.py
 ```
 
-## Validating changes
+A REPL with `/plan`, `/supervise`, `/verbose`, `/help`, `/exit`. It briefs from
+this working directory's project memory and delegates to the subagent team.
 
-Before committing, run the full gate:
+### Analyze a repository (the use case)
 
 ```sh
-just validate   # lint --fix, type-check, test
+# build the RAG index once (needs OPENAI_API_KEY):
+python scripts/ingest_rag.py
+
+# analyze a target repo (defaults to the committed scripts/sample_app fixture):
+python scripts/analyze_repo.py [TARGET_DIR]
 ```
+
+This runs one analysis through the principal coordinator and prints an **evidence
+report** (subagent results, sources by origin, loop behaviour, tokens/latency/cost),
+then the Scribe writes one file per agent into `DOCS_DIR`. To capture a trace:
+
+```sh
+OBSERVABILITY=otel-file OTEL_TRACE_FILE=trace.jsonl python scripts/analyze_repo.py
+```
+
+## Project layout
+
+```
+main.py                     # CLI entry point (composition root)
+scripts/
+  analyze_repo.py           # the repo-analysis driver (evidence report)
+  ingest_rag.py             # build the RAG index from the corpus
+  sample_app/               # a small FastAPI fixture to analyze
+src/
+  llm/         # message value objects, ChatModel/EmbeddingModel ports, OpenAI adapter
+  harness/     # runtime (context+ledger), loop, tools, control, context, events, delegation
+  agent/       # Session, Subagent, team, Documenter, RAG tool, planning, progress, CLI
+  rag/         # chunk, embed, vector store, retrieve, ingest
+  memory/      # ProjectMemory, JsonMemoryStore, ProjectMemoryService
+  observability/  # pure span mapping + Phoenix/OTel boundary
+  prompts/     # role prompts
+  tests/       # 196 tests
+```
+
+## Developer tasks
+
+| Recipe | Command | Purpose |
+| --- | --- | --- |
+| `just run` | `uv run python main.py` | Run the interactive chat. |
+| `just test` | `uv run pytest` | Run the test suite. |
+| `just lint` | `uv run ruff check --fix .` | Lint + auto-fix (Ruff; 8-space indent, line 110). |
+| `just format` | `uv run ruff format .` | Format. |
+| `just type` | `uv run pyright` | Type-check. |
+| `just validate` | lint + type + test | Full gate before committing. |

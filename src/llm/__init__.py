@@ -12,15 +12,18 @@ from llm.messages import (
         ToolCall,
         ToolSchema,
 )
-from llm.ports import ChatModel
+from llm.ports import ChatModel, EmbeddingModel
+from llm.pricing import estimate_cost
 
 __all__ = [
         "ChatModel",
         "Completion",
         "Conversation",
+        "EmbeddingModel",
         "Message",
         "Role",
         "TokenUsage",
         "ToolCall",
         "ToolSchema",
+        "estimate_cost",
 ]
