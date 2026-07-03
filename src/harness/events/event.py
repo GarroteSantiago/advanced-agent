@@ -20,9 +20,16 @@ def _now() -> datetime:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Event:
-        """Base class for all harness events."""
+        """Base class for all harness events.
+
+        ``source`` names the agent that emitted the event: empty for the principal,
+        the subagent's name once an ``EventForwarder`` bridges a subagent's private
+        stream onto the principal bus. It is how aggregated observability keeps the
+        provenance a nested trace needs.
+        """
 
         occurred_at: datetime = field(default_factory=_now)
+        source: str = ""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39,6 +46,17 @@ class PhaseCompleted(Event):
 class ModelCalled(Event):
         message_count: int
         offered_tools: int
+        model: str = ""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ModelCompleted(Event):
+        model: str
+        prompt_tokens: int
+        completion_tokens: int
+        latency_ms: float
+        cost_usd: float
+        output: str = ""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53,6 +71,13 @@ class ToolObserved(Event):
         tool_name: str
         call_id: str
         ok: bool
+        error: str | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class DocumentsRetrieved(Event):
+        query: str
+        sources: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -70,3 +95,11 @@ class LoopStopped(Event):
 class GuardTripped(Event):
         guard: str
         reason: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class StrategyNudged(Event):
+        """A no-progress loop was detected and corrective guidance was injected."""
+
+        reason: str
+        occurrences: int

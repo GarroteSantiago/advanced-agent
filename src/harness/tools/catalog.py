@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
-from harness.tools.tool import ToolInterface
+from harness.tools.tool import Describable
 from llm import ToolSchema
 
 
@@ -21,11 +21,11 @@ class ToolCatalog:
         _schemas: tuple[ToolSchema, ...] = ()
 
         @classmethod
-        def of_tools(cls, tools: Iterable[ToolInterface]) -> ToolCatalog:
+        def of_tools(cls, tools: Iterable[Describable]) -> ToolCatalog:
                 return cls(tuple(cls._render(tool) for tool in tools))
 
         @staticmethod
-        def _render(tool: ToolInterface) -> ToolSchema:
+        def _render(tool: Describable) -> ToolSchema:
                 return {
                         "name": tool.name,
                         "description": tool.description,

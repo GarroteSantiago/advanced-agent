@@ -5,8 +5,17 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11.9"
 dependencies = [
+    "numpy>=1.26",
     "openai>=1.50.0",
     "tavily-python>=0.5.0",
+]
+
+[project.optional-dependencies]
+# Observability adapter (Track B). Kept out of the core install so the harness
+# stays openai+tavily; enable with `uv sync --extra observability`.
+observability = [
+    "arize-phoenix>=4.0",
+    "opentelemetry-sdk>=1.20",
 ]
 
 [build-system]
@@ -21,7 +30,9 @@ packages = [
     "src/agent",
     "src/llm",
     "src/memory",
+    "src/observability",
     "src/prompts",
+    "src/rag",
     "src/common",
 ]
 
@@ -74,6 +85,9 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
+    # Fixture repo analysed by scripts/analyze_repo.py -- deliberately standard
+    # 4-space FastAPI code, not project source; kept out of the project's lint.
+    "scripts/sample_app",
 ]
 
 # Same as Black.

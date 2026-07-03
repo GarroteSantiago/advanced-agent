@@ -5,6 +5,8 @@ from harness.runtime import (
         ExecutionMetadata,
         ExecutionResult,
         ExecutionState,
+        Source,
+        SubagentResult,
 )
 from harness.tools import ToolResult
 from llm import Completion, Conversation, Message, Role, TokenUsage, ToolCall
@@ -12,7 +14,7 @@ from llm import Completion, Conversation, Message, Role, TokenUsage, ToolCall
 
 def _started() -> AgentExecutionContext:
         convo = Conversation.of([Message.user("do the thing")])
-        return AgentExecutionContext.for_task("t-1", convo)
+        return AgentExecutionContext.for_task("t-1", convo, request="do the thing")
 
 
 def test_metadata_increments_and_accumulates_usage_without_mutation():
@@ -80,6 +82,34 @@ def test_cycle_signature_is_stable_for_equal_action_and_observation():
         assert a.cycle_signature() != _started().cycle_signature()
 
 
+def test_observed_records_the_completed_cycle_signature():
+        call = ToolCall(id="c1", name="echo", arguments={"text": "hi"})
+        result = ToolResult.success(call_id="c1", tool_name="echo", content="hi")
+
+        context = _started().with_assistant(Completion(tool_calls=(call,))).with_tool_results([result])
+        signature = context.cycle_signature()
+
+        observed = context.observed()
+
+        # The signature is captured before observed() clears pending/results.
+        assert tuple(observed.recorded_signatures()) == (signature,)
+        assert observed.cycle_signature() == "=>"  # pending/results now cleared
+
+
+def test_recorded_signatures_accumulate_and_repeat_when_the_cycle_repeats():
+        def one_cycle(ctx: AgentExecutionContext) -> AgentExecutionContext:
+                call = ToolCall(id="c1", name="echo", arguments={"text": "hi"})
+                result = ToolResult.success(call_id="c1", tool_name="echo", content="hi")
+                acted = ctx.with_assistant(Completion(tool_calls=(call,))).with_tool_results([result])
+                return acted.observed()
+
+        context = one_cycle(one_cycle(_started()))
+
+        signatures = tuple(context.recorded_signatures())
+        assert len(signatures) == 2
+        assert signatures[0] == signatures[1]  # identical action+result each cycle
+
+
 def test_stopped_and_aborted_reach_terminal_states():
         stopped = _started().stopped("the answer")
         assert stopped.state() is ExecutionState.COMPLETED
@@ -104,3 +134,30 @@ def test_execution_result_from_aborted_context_is_not_success():
         result = ExecutionResult.from_context(_started().aborted(), stop_reason="iteration cap")
         assert not result.succeeded()
         assert result.state is ExecutionState.ABORTED
+
+
+def test_for_task_seeds_the_ledger_with_the_original_request():
+        assert _started().ledger().original_request() == "do the thing"
+
+
+def test_ledger_transitions_are_copy_on_write_through_the_context():
+        base = _started()
+
+        grown = (
+                base.observing_that("found a router")
+                .touching("src/app.py")
+                .consulting(Source.from_rag("fastapi/routing"))
+                .crediting(SubagentResult.completed("Explorer", "mapped the tree"))
+                .noting_progress("explored the tree")
+        )
+
+        # original context untouched
+        assert base.ledger().observations() == ()
+        assert base.ledger().modified_files() == ()
+
+        ledger = grown.ledger()
+        assert ledger.observations() == ("found a router",)
+        assert ledger.modified_files() == ("src/app.py",)
+        assert tuple(s.reference for s in ledger.sources_consulted()) == ("fastapi/routing",)
+        assert tuple(r.agent for r in ledger.subagent_results()) == ("Explorer",)
+        assert ledger.progress() == ("explored the tree",)

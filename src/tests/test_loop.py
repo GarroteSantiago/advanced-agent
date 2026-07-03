@@ -4,13 +4,18 @@ Driven entirely by a scripted ``FakeChatModel`` and the ``EchoTool`` -- no real
 model or network.
 """
 
+from harness.assembly import build_agent_loop
+from harness.context import ContextManager
 from harness.control import Controller, IterationLimiter
 from harness.events import (
         AuditLogger,
         CycleCompleted,
         EventBus,
+        GuardTripped,
         LoopStopped,
         ModelCalled,
+        ModelCompleted,
+        StrategyNudged,
         ToolInvoked,
         ToolObserved,
 )
@@ -26,7 +31,7 @@ from harness.loop import (
 )
 from harness.runtime import AgentExecutionContext, ExecutionState
 from harness.tools import ToolExecutor, ToolRegistry
-from harness.tools.adapters import EchoTool
+from harness.tools.adapters import EchoTool, WriteFileTool
 from llm import Completion, Conversation, Message, Role, ToolCall
 from tests.doubles import FakeChatModel
 
@@ -88,6 +93,41 @@ async def test_full_react_cycle_runs_tool_then_answers():
         assert kinds[-1] is LoopStopped
 
 
+async def test_model_completed_event_carries_model_tokens_latency_and_cost():
+        model = FakeChatModel([Completion(content="done")])
+        loop, audit, _ = _wire(model)
+
+        await loop.run(_context())
+
+        completed = [e for e in audit.records() if isinstance(e, ModelCompleted)]
+        assert len(completed) == 1
+        event = completed[0]
+        assert event.model == "fake-model"
+        assert event.output == "done"
+        assert event.latency_ms >= 0.0
+        assert event.cost_usd == 0.0  # fake-model is not in the price table
+
+        called = [e for e in audit.records() if isinstance(e, ModelCalled)]
+        assert called[0].model == "fake-model"
+
+
+async def test_failing_tool_reports_the_error_on_the_observation_event():
+        model = FakeChatModel(
+                [
+                        Completion(tool_calls=(ToolCall(id="c1", name="ghost", arguments={}),)),
+                        Completion(content="handled"),
+                ]
+        )
+        loop, audit, _ = _wire(model)
+
+        await loop.run(_context())
+
+        observed = [e for e in audit.records() if isinstance(e, ToolObserved)]
+        assert observed[0].ok is False
+        assert observed[0].error is not None
+        assert "ghost" in observed[0].error
+
+
 async def test_answer_without_tools_stops_immediately():
         model = FakeChatModel([Completion(content="done, no tools needed")])
         loop, _, _ = _wire(model)
@@ -128,6 +168,95 @@ async def test_iteration_cap_aborts_a_non_converging_run():
         assert result.state is ExecutionState.ABORTED
         assert result.metadata.iterations == 2
         assert "iteration cap" in (result.stop_reason or "")
+
+
+async def test_progress_tracker_nudges_then_stops_a_repeating_model():
+        # The model keeps asking for the same call with the same arguments; the
+        # tracker (default-on in the real assembly) should intervene well before
+        # the far-off iteration cap.
+        repeat = Completion(tool_calls=(ToolCall(id="c1", name="echo", arguments={"text": "loop"}),))
+        model = FakeChatModel([repeat, repeat, repeat])
+
+        bus = EventBus()
+        audit = AuditLogger()
+        bus.subscribe(audit)
+        registry = ToolRegistry()
+        registry.register(EchoTool())
+        loop = build_agent_loop(
+                model=model,
+                registry=registry,
+                controller=Controller([IterationLimiter(max_iterations=20)]),
+                event_bus=bus,
+        )
+
+        result = await loop.run(_context())
+
+        assert result.state is ExecutionState.ABORTED
+        assert "progress-tracker" in (result.stop_reason or "")
+        assert result.metadata.iterations < 20  # stopped for stalling, not the hard cap
+
+        kinds = [type(e) for e in audit.records()]
+        assert StrategyNudged in kinds  # nudged on the first repeat
+        assert GuardTripped in kinds  # then stopped on the next
+
+        # The corrective guidance was folded into the conversation as feedback.
+        nudges = [
+                m
+                for m in result.conversation.messages()
+                if m.role is Role.USER and "repeated the same action" in m.content
+        ]
+        assert len(nudges) == 1
+
+
+async def test_a_write_tool_call_records_the_modified_file_in_the_ledger(tmp_path):
+        target = tmp_path / "note.txt"
+        model = FakeChatModel(
+                [
+                        Completion(
+                                tool_calls=(
+                                        ToolCall(
+                                                id="c1",
+                                                name="write_file",
+                                                arguments={"path": str(target), "content": "hi"},
+                                        ),
+                                )
+                        ),
+                        Completion(content="done"),
+                ]
+        )
+        registry = ToolRegistry()
+        registry.register(WriteFileTool())
+        loop = build_agent_loop(
+                model=model,
+                registry=registry,
+                controller=Controller([IterationLimiter(max_iterations=5)]),
+                event_bus=EventBus(),
+        )
+
+        result = await loop.run(_context())
+
+        assert result.succeeded()
+        assert list(result.ledger.modified_files()) == [str(target)]
+
+
+async def test_reason_phase_sends_the_windowed_view_not_the_full_history():
+        model = FakeChatModel([Completion(content="ok")])
+        empty_catalog = ToolRegistry().catalog()
+        reason = ReasonPhase(
+                model, empty_catalog, EventBus(), ContextManager(max_messages=10, keep_recent=4)
+        )
+        messages = [Message.system("role"), Message.user("the task")]
+        for i in range(20):
+                messages.append(Message.assistant(f"turn {i}"))
+        context = AgentExecutionContext.for_task("t-1", Conversation.of(messages))
+
+        result = await reason.run(context)
+
+        sent, _ = model.calls[-1]
+        assert len(sent) < len(messages)  # the model saw a windowed view
+        assert sent.messages()[0] == Message.system("role")  # instructions preserved
+        # But the full history is retained on the context (the completion folds in).
+        assert len(result.context.current_conversation()) == len(messages) + 1
 
 
 async def test_step_runs_a_single_phase_and_reports_its_outcome():

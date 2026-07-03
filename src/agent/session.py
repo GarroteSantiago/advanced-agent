@@ -14,6 +14,7 @@ from collections.abc import Iterable
 from agent.planning import PlanMode
 from harness.assembly import build_agent_loop
 from harness.control import Controller, Guard, IterationLimiter
+from harness.delegation import SubagentRegistry
 from harness.events import EventBus, EventHandler
 from harness.runtime import AgentExecutionContext, ExecutionResult
 from harness.tools import Approver, AutoApprover, ToolInterface, ToolRegistry
@@ -32,6 +33,7 @@ class Session:
                 handlers: Iterable[EventHandler] = (),
                 approver: Approver | None = None,
                 plan_mode: PlanMode | None = None,
+                subagents: SubagentRegistry | None = None,
                 max_iterations: int = 10,
                 system_prompt: str | None = None,
         ) -> None:
@@ -47,6 +49,7 @@ class Session:
                 self._controller = Controller([IterationLimiter(max_iterations), *guards])
                 self._approver = approver or AutoApprover()
                 self._plan_mode = plan_mode
+                self._subagents = subagents
 
                 self._conversation = Conversation.empty()
                 if system_prompt is not None:
@@ -67,7 +70,7 @@ class Session:
                         approved = await self._plan_mode.negotiate(self._model, self._conversation)
                         if approved is None:
                                 rejected = AgentExecutionContext.for_task(
-                                        task_id, self._conversation
+                                        task_id, self._conversation, request=message
                                 ).aborted("user rejected the plan")
                                 return ExecutionResult.from_context(rejected)
                         self._conversation = approved
@@ -78,9 +81,10 @@ class Session:
                         controller=self._controller,
                         event_bus=self._bus,
                         approver=self._approver,
+                        subagents=self._subagents,
                 )
                 result = await loop.run(
-                        AgentExecutionContext.for_task(task_id, self._conversation)
+                        AgentExecutionContext.for_task(task_id, self._conversation, request=message)
                 )
                 self._conversation = result.conversation  # persist history across turns
                 return result

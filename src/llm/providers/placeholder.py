@@ -13,6 +13,9 @@ from llm.messages import Completion, Conversation, ToolSchema
 
 
 class PlaceholderChatModel:
+        def identifier(self) -> str:
+                return "placeholder"
+
         async def complete(
                 self,
                 conversation: Conversation,

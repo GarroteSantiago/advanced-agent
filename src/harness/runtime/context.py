@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 
+from harness.runtime.ledger import Source, SubagentResult, TaskLedger
 from harness.runtime.metadata import ExecutionMetadata
 from harness.runtime.state import ExecutionState
 from harness.tools import ToolResult
@@ -24,15 +25,27 @@ class AgentExecutionContext:
 
         _conversation: Conversation
         _metadata: ExecutionMetadata
+        _ledger: TaskLedger
         _state: ExecutionState = ExecutionState.IDLE
         _pending: tuple[ToolCall, ...] = ()
         _last_results: tuple[ToolResult, ...] = ()
         _final_output: str | None = None
         _stop_reason: str | None = None
+        _cycle_signatures: tuple[str, ...] = ()
 
         @classmethod
-        def for_task(cls, task_id: str, conversation: Conversation) -> AgentExecutionContext:
-                return cls(_conversation=conversation, _metadata=ExecutionMetadata(task_id=task_id))
+        def for_task(
+                cls,
+                task_id: str,
+                conversation: Conversation,
+                *,
+                request: str = "",
+        ) -> AgentExecutionContext:
+                return cls(
+                        _conversation=conversation,
+                        _metadata=ExecutionMetadata(task_id=task_id),
+                        _ledger=TaskLedger.for_request(request),
+                )
 
         # --- queries -------------------------------------------------------
         def current_conversation(self) -> Conversation:
@@ -49,6 +62,9 @@ class AgentExecutionContext:
 
         def metadata(self) -> ExecutionMetadata:
                 return self._metadata
+
+        def ledger(self) -> TaskLedger:
+                return self._ledger
 
         def final_output(self) -> str | None:
                 return self._final_output
@@ -71,6 +87,14 @@ class AgentExecutionContext:
                         for result in self._last_results
                 )
                 return f"{calls}=>{results}"
+
+        def recorded_signatures(self) -> Sequence[str]:
+                """The signature of every cycle closed so far.
+
+                The history a progress tracker reads to notice the agent
+                repeating the same call/result without making progress.
+                """
+                return self._cycle_signatures
 
         # --- transitions (copy-on-write) -----------------------------------
         def with_assistant(self, completion: Completion) -> AgentExecutionContext:
@@ -104,6 +128,7 @@ class AgentExecutionContext:
                 return replace(
                         self,
                         _conversation=folded,
+                        _cycle_signatures=(*self._cycle_signatures, self.cycle_signature()),
                         _pending=(),
                         _last_results=(),
                         _state=ExecutionState.OBSERVING,
@@ -119,3 +144,45 @@ class AgentExecutionContext:
 
         def aborted(self, reason: str = "") -> AgentExecutionContext:
                 return replace(self, _state=ExecutionState.ABORTED, _stop_reason=reason or None)
+
+        def advised(self, note: str) -> AgentExecutionContext:
+                """Fold harness steering into the conversation (loop-break guidance).
+
+                Injected as a user-role message so the next reason turn reads it as
+                feedback. The harness speaks here, not the human, but user-role is
+                the portable way to steer a chat model mid-run.
+                """
+                return replace(
+                        self,
+                        _conversation=self._conversation.with_message(Message.user(note)),
+                        _state=ExecutionState.OBSERVING,
+                )
+
+        # --- ledger transitions (delegate to the shared task state) ---------
+        def noting_progress(self, note: str) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_progress(note))
+
+        def crediting(self, result: SubagentResult) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_subagent_result(result))
+
+        def consulting(self, source: Source) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_source(source))
+
+        def touching(self, path: str) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_modified_file(path))
+
+        def touching_all(self, paths: Iterable[str]) -> AgentExecutionContext:
+                """Record several modified files at once (no-op for an empty run).
+
+                The batch form the action phases use to fold the paths a cycle's
+                tools reported into the ledger in one copy-on-write step.
+                """
+                ledger = self._ledger
+                for path in paths:
+                        ledger = ledger.with_modified_file(path)
+                if ledger is self._ledger:
+                        return self
+                return replace(self, _ledger=ledger)
+
+        def observing_that(self, note: str) -> AgentExecutionContext:
+                return replace(self, _ledger=self._ledger.with_observation(note))

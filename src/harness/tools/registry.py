@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from harness.tools.catalog import ToolCatalog
 from harness.tools.tool import ToolInterface
 
@@ -41,6 +43,9 @@ class ToolRegistry:
 
         def has(self, name: str) -> bool:
                 return name in self._tools
+
+        def tools(self) -> Sequence[ToolInterface]:
+                return tuple(self._tools.values())
 
         def catalog(self) -> ToolCatalog:
                 return ToolCatalog.of_tools(self._tools.values())

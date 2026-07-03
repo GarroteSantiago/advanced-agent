@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from harness.events import EventBus, ModelCalled
+from time import perf_counter
+
+from harness.context import ContextManager
+from harness.events import EventBus, ModelCalled, ModelCompleted
 from harness.loop.phase import Outcome, PhaseResult
 from harness.runtime import AgentExecutionContext
 from harness.tools import ToolCatalog
-from llm import ChatModel
+from llm import ChatModel, estimate_cost
 
 
 class ReasonPhase:
@@ -14,6 +17,10 @@ class ReasonPhase:
 
         Reports ``TOOLS_REQUESTED`` when the model wants tools, or ``ANSWERED``
         (a terminal answer) otherwise -- the navigator decides what each means.
+
+        The ``ContextManager`` projects the full history into the view actually
+        sent to the model (windowing long conversations); the completion is still
+        folded back into the *full* context, so history is never lost.
         """
 
         def __init__(
@@ -21,23 +28,42 @@ class ReasonPhase:
                 model: ChatModel,
                 catalog: ToolCatalog,
                 event_bus: EventBus | None = None,
+                context_manager: ContextManager | None = None,
         ) -> None:
                 self._model = model
                 self._catalog = catalog
                 self._bus = event_bus or EventBus()
+                self._context = context_manager or ContextManager()
 
         @property
         def name(self) -> str:
                 return "reason"
 
         async def run(self, context: AgentExecutionContext) -> PhaseResult:
-                conversation = context.current_conversation()
+                conversation = self._context.prepare(context.current_conversation())
                 schemas = self._catalog.for_model()
+                model = self._model.identifier()
                 self._bus.publish(
-                        ModelCalled(message_count=len(conversation), offered_tools=len(schemas))
+                        ModelCalled(
+                                message_count=len(conversation),
+                                offered_tools=len(schemas),
+                                model=model,
+                        )
                 )
 
+                started = perf_counter()
                 completion = await self._model.complete(conversation, tools=schemas or None)
+                latency_ms = (perf_counter() - started) * 1000
+                self._bus.publish(
+                        ModelCompleted(
+                                model=model,
+                                prompt_tokens=completion.usage.prompt_tokens,
+                                completion_tokens=completion.usage.completion_tokens,
+                                latency_ms=latency_ms,
+                                cost_usd=estimate_cost(model, completion.usage),
+                                output=completion.content,
+                        )
+                )
                 context = context.with_assistant(completion)
 
                 if completion.requests_tools():

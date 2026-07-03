@@ -1,9 +1,22 @@
-"""Memory layer (deferred seam).
+"""Persistent per-project memory (spec §2).
 
-Project-persistent memory beyond a single conversation: ``ConversationMemory``
-(session history/summaries) and ``VectorMemory`` (embeddings + vector store for
-RAG over technical docs). ``VectorMemory`` is what will pull ``EmbeddingModel``
-into ``llm`` when it lands.
-
-Deferred to a later increment; nothing here yet.
+Durable knowledge about a *specific target project* that survives across agent
+sessions -- distinct from the ``rag`` package (framework-level general knowledge)
+and the in-run ``TaskLedger`` (discarded when a run ends). ``ProjectMemory`` is
+the aggregate; ``MemoryStore``/``JsonMemoryStore`` persist it; and
+``ProjectMemoryService`` is the run-boundary seam that briefs a run from memory
+and absorbs a finished run's ledger back into it.
 """
+
+from memory.project_memory import MemoryCategory, MemoryEntry, ProjectMemory
+from memory.service import ProjectMemoryService
+from memory.store import JsonMemoryStore, MemoryStore
+
+__all__ = [
+        "JsonMemoryStore",
+        "MemoryCategory",
+        "MemoryEntry",
+        "MemoryStore",
+        "ProjectMemory",
+        "ProjectMemoryService",
+]

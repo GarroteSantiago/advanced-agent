@@ -9,12 +9,18 @@ from harness.loop.navigator import (
         UnknownTransitionError,
 )
 from harness.loop.phase import Outcome, Phase, PhaseResult
-from harness.loop.phases import ActionPhase, ObservationPhase, ReasonPhase
+from harness.loop.phases import (
+        ActionPhase,
+        DelegatingActionPhase,
+        ObservationPhase,
+        ReasonPhase,
+)
 
 __all__ = [
         "ActionPhase",
         "AgentLoop",
         "Continue",
+        "DelegatingActionPhase",
         "Halt",
         "Navigator",
         "ObservationPhase",

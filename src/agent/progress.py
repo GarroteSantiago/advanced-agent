@@ -19,6 +19,7 @@ from harness.events import (
         ModelCalled,
         PhaseCompleted,
         PhaseStarted,
+        StrategyNudged,
         ToolInvoked,
         ToolObserved,
 )
@@ -51,6 +52,8 @@ class ProgressView:
                                 self._renderer.show(f"    {'✓' if ok else '✗'} {name}")
                         case GuardTripped(reason=reason):
                                 self._renderer.show(f"  ⚠ {reason}")
+                        case StrategyNudged():
+                                self._renderer.show("  ↻ repeating detected — nudging a change of strategy")
                         case PhaseStarted(phase=phase) if self.verbose:
                                 self._renderer.show(f"  [phase {phase} ▶]")
                         case PhaseCompleted(phase=phase) if self.verbose:
