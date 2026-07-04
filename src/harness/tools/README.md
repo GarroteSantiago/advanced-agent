@@ -43,6 +43,12 @@ feed back. Nothing else invokes a tool.
 > **Honest caveats (from the source):** glob matching is `fnmatch` (`*` spans
 > separators); command matching is substring-based — a guardrail, not a sandbox.
 
+The TOML schema `PolicyConfig.from_toml` parses (`workspace`, `[permissions.read]`
+/ `[permissions.write]` `deny`, `[commands]` `deny` / `require_approval`) is
+documented with a worked example in
+[`agent.config.toml.example`](../../../agent.config.toml.example) at the repo root
+— copy it to `agent.config.toml` to enable it.
+
 This is where the **Scribe's confinement** comes from: a per-agent
 `PolicyVerifier` with `workspace = docs_dir` denies any write outside the docs
 folder before the tool ever runs (see [`../../agent/`](../../agent/)).

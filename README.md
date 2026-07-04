@@ -19,6 +19,7 @@ findings to a documentation folder. See [`docs/use-case.md`](docs/use-case.md).
 | [`docs/architecture.md`](docs/architecture.md) | Onion layers, the loop/navigator/phases, delegation, control, RAG, memory, observability, the Scribe. |
 | [`docs/diagrams/`](docs/diagrams/) | PlantUML: ownership, runtime collaboration, one ReAct turn. |
 | [`src/README.md`](src/README.md) | **Per-package drill-down**: every `src/` package has its own README (down to key classes) + a PlantUML diagram at its abstraction level. Start here to read the tree. |
+| [`docs/composition-root.md`](docs/composition-root.md) | How `main.py` wires the onion — which concrete adapters get injected inward, step by step. |
 | [`docs/use-case.md`](docs/use-case.md) | The concrete objective, the team, success criteria. |
 | [`docs/rag-base.md`](docs/rag-base.md) | The RAG corpus, pipeline, and how to build the index. |
 | [`docs/evidence/`](docs/evidence/) | Live-run evidence: executed-task demos + an OpenTelemetry trace. |
@@ -52,6 +53,10 @@ Copy `.env.sample` to `.env` and fill in what you need (`.env` is gitignored):
 | `DOCS_DIR` | Folder the Scribe writes results into (it is confined here). | `docs/analysis` |
 | `OBSERVABILITY` | `phoenix` (UI) or `otel-file` (JSONL) — else off. | off |
 | `OTEL_TRACE_FILE` | Trace output for `otel-file` mode. | `otel-trace.jsonl` |
+
+Optional **security guardrails** live in `agent.config.toml` (loaded if present):
+copy [`agent.config.toml.example`](agent.config.toml.example) and edit it. See the
+schema and fail-closed semantics in [`src/harness/tools/README.md`](src/harness/tools/README.md).
 
 ## Run
 

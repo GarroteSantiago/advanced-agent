@@ -1,0 +1,50 @@
+# agent.config.toml — config-driven security guardrails (OPTIONAL).
+#
+# Copy this file to `agent.config.toml` in the repository root to enable it;
+# main.py loads it via PolicyConfig.from_toml() and, when present, checks every
+# tool call against it BEFORE the tool runs (see src/harness/tools/README.md).
+# With no file, the agent runs with supervision only (AutoApprover by default).
+#
+# Every rule FAILS CLOSED: a matched deny (or an unconfirmed require_approval)
+# refuses the call, and the denial reason becomes the tool's observation.
+#
+# Honest caveats (they are real, from src/harness/tools/policy.py):
+#   * Path globs use fnmatch semantics, so `*` spans path separators.
+#   * Command matching is SUBSTRING-based — a guardrail, not a sandbox.
+
+# Confine file tools (read_file, list_files, write_file) to this directory.
+# A path resolving outside it is denied. Omit to allow the whole filesystem.
+workspace = "."
+
+[permissions.read]
+# Deny-globs for read_file / list_files `path` arguments.
+deny = [
+        "*.env",
+        "**/secrets/*",
+        "**/.ssh/*",
+]
+
+[permissions.write]
+# Deny-globs for write_file `path` arguments (write_file mutates).
+deny = [
+        "*.lock",
+        ".git/*",
+]
+
+[commands]
+# Substrings that, if present in a run_command `command`, deny it outright.
+deny = [
+        "rm -rf",
+        "sudo",
+        ":(){",          # fork bomb
+        "mkfs",
+]
+
+# Substrings that require human confirmation before the command runs. Denied
+# if no confirmer is wired or the user declines.
+require_approval = [
+        "git push",
+        "pip install",
+        "uv add",
+        "curl",
+]

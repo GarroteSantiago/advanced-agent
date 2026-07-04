@@ -42,7 +42,9 @@ keeps `harness` reusable and every collaborator swappable at one seam.
 
 Both wire the **same** phase graph through
 [`harness/assembly.py`](harness/assembly.py) — the single place the ReAct loop is
-assembled.
+assembled. For how the outermost adapters (model, retriever, memory, policy, I/O,
+tracer) get injected, see the composition-root walkthrough:
+[`docs/composition-root.md`](../docs/composition-root.md).
 
 ## Reading order for a newcomer
 
