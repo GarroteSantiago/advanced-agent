@@ -9,7 +9,9 @@ at the edge, ports pointing inward.
 
 The PlantUML diagrams in [`diagrams/`](diagrams/) show the object graph, the
 runtime collaboration, and one ReAct turn step-by-step. This document explains
-the *why*.
+the *why*. For the **per-package drill-down** — each `src/` package's
+responsibility, key classes, and a diagram at its own abstraction level — start
+at [`src/README.md`](../src/README.md) and follow the links down.
 
 ## Layers (onion)
 

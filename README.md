@@ -18,6 +18,7 @@ findings to a documentation folder. See [`docs/use-case.md`](docs/use-case.md).
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Onion layers, the loop/navigator/phases, delegation, control, RAG, memory, observability, the Scribe. |
 | [`docs/diagrams/`](docs/diagrams/) | PlantUML: ownership, runtime collaboration, one ReAct turn. |
+| [`src/README.md`](src/README.md) | **Per-package drill-down**: every `src/` package has its own README (down to key classes) + a PlantUML diagram at its abstraction level. Start here to read the tree. |
 | [`docs/use-case.md`](docs/use-case.md) | The concrete objective, the team, success criteria. |
 | [`docs/rag-base.md`](docs/rag-base.md) | The RAG corpus, pipeline, and how to build the index. |
 | [`docs/evidence/`](docs/evidence/) | Live-run evidence: executed-task demos + an OpenTelemetry trace. |
