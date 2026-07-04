@@ -17,7 +17,7 @@ findings to a documentation folder. See [`docs/use-case.md`](docs/use-case.md).
 | Doc | What it covers |
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Onion layers, the loop/navigator/phases, delegation, control, RAG, memory, observability, the Scribe. |
-| [`docs/diagrams/`](docs/diagrams/) | PlantUML: ownership, runtime collaboration, one ReAct turn. |
+| [`docs/diagrams/`](docs/diagrams/) | PlantUML: a whole-system [overview](docs/diagrams/overview.puml) (start here), then ownership, runtime collaboration, one ReAct turn. |
 | [`src/README.md`](src/README.md) | **Per-package drill-down**: every `src/` package has its own README (down to key classes) + a PlantUML diagram at its abstraction level. Start here to read the tree. |
 | [`docs/composition-root.md`](docs/composition-root.md) | How `main.py` wires the onion — which concrete adapters get injected inward, step by step. |
 | [`docs/use-case.md`](docs/use-case.md) | The concrete objective, the team, success criteria. |

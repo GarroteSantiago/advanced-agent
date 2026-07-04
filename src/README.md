@@ -5,9 +5,9 @@ README** documenting its responsibility, key classes, and collaborations, plus a
 PlantUML diagram at that package's abstraction level. Start here, then follow the
 links down.
 
-> Package-level diagram: [`src.puml`](src.puml). System-wide "why":
-> [`docs/architecture.md`](../docs/architecture.md). Onboarding diagrams:
-> [`docs/diagrams/`](../docs/diagrams/).
+> Whole-system summary: [`docs/diagrams/overview.puml`](../docs/diagrams/overview.puml)
+> (start here). Package-level dependency diagram: [`src.puml`](src.puml).
+> System-wide "why": [`docs/architecture.md`](../docs/architecture.md).
 
 ## The rings (inner → outer)
 
