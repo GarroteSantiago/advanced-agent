@@ -1,0 +1,43 @@
+@startuml memory
+title memory — aggregate, persistence port, and the run-boundary seam
+
+skinparam linetype ortho
+hide empty methods
+
+legend left
+  *-- owns
+  o-- holds (injected port)
+  ..|> implements
+  ..> uses
+endlegend
+
+class ProjectMemory {
+        +remember(cat, content)  ' copy-on-write, dedupes
+        +brief(): str
+        +entries(cat)
+}
+class MemoryEntry
+enum MemoryCategory {
+        ARCHITECTURE / FILE / DEPENDENCY
+        COMMAND / CONVENTION / DECISION
+        BUG / SUMMARY
+}
+interface MemoryStore {
+        +load(project_id): ProjectMemory
+        +save(project_id, memory)
+}
+class JsonMemoryStore
+class ProjectMemoryService <<run boundary>> {
+        +briefing(project_id): str
+        +absorb(project_id, result)
+}
+class "ExecutionResult\n(harness.runtime)" as Result
+
+ProjectMemory o-- "*" MemoryEntry
+MemoryEntry o-- MemoryCategory
+JsonMemoryStore ..|> MemoryStore
+MemoryStore ..> ProjectMemory
+ProjectMemoryService o-- MemoryStore
+ProjectMemoryService ..> Result : absorb() reads ledger
+
+@enduml

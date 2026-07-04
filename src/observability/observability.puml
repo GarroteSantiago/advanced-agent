@@ -1,0 +1,54 @@
+@startuml observability
+title observability — pure mapping + a thin OTel boundary
+
+skinparam linetype ortho
+hide empty methods
+
+legend left
+  ..> uses / produces
+  ..|> implements
+  spans.py has NO external dependency;
+  only phoenix.py touches OpenTelemetry.
+endlegend
+
+package "harness.events" {
+        class ModelCalled
+        class ModelCompleted
+        class ToolInvoked
+        class ToolObserved
+        class LoopStopped
+}
+
+package "observability.spans (pure)" {
+        class SpanData {
+                +name / attributes
+        }
+        class "llm_span()" as LlmSpan
+        class "tool_span()" as ToolSpan
+}
+
+package "observability.phoenix (boundary)" {
+        interface "EventHandler" as Handler
+        class PhoenixTracer {
+                pairs start+end by call_id
+                only principal's stop ends root
+        }
+}
+
+LlmSpan ..> SpanData
+ToolSpan ..> SpanData
+ModelCompleted ..> LlmSpan
+ToolObserved ..> ToolSpan
+
+PhoenixTracer ..|> Handler
+PhoenixTracer ..> LlmSpan
+PhoenixTracer ..> ToolSpan
+PhoenixTracer ..> LoopStopped : close run root
+
+note bottom of PhoenixTracer
+  agent.run (CHAIN)
+   ├─ llm <model>   (per model call)
+   └─ tool <name>   (per tool call)
+end note
+
+@enduml

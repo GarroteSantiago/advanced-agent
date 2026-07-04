@@ -1,0 +1,71 @@
+@startuml runtime
+title harness.runtime — immutable spine + shared task state
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend left
+  *-- owns / holds
+  ..> produces
+  copy-on-write: every transition returns a NEW value
+endlegend
+
+class AgentExecutionContext {
+        --queries--
+        +current_conversation()
+        +pending_tool_calls()
+        +state() / metadata() / ledger()
+        +cycle_signature() / recorded_signatures()
+        --transitions (copy-on-write)--
+        +with_assistant(c)  ' increments iteration + usage
+        +with_tool_results(r)
+        +observed()         ' folds results, records signature
+        +stopped(out) / aborted(reason)
+        +advised(note)      ' user-role steering
+        +crediting/consulting/touching/...
+}
+
+class TaskLedger {
+        +original_request()
+        +progress() / observations()
+        +subagent_results()
+        +sources_consulted()
+        +modified_files()   ' deduped
+}
+
+class ExecutionMetadata {
+        +iterations : int
+        +usage : TokenUsage
+        +incremented() / add_usage()
+}
+
+enum ExecutionState {
+        IDLE / REASONING / ACTING
+        OBSERVING / COMPLETED / ABORTED
+        +is_terminal()
+}
+
+class Source
+enum Origin {
+        REPO / MEMORY / RAG / WEB / INFERENCE
+}
+class SubagentResult {
+        +completed() / failed()
+}
+
+class ExecutionResult {
+        +final_output / state / stop_reason
+        +succeeded()
+        +from_context(ctx)
+}
+
+AgentExecutionContext *-- TaskLedger
+AgentExecutionContext *-- ExecutionMetadata
+AgentExecutionContext o-- ExecutionState
+TaskLedger o-- "*" Source
+TaskLedger o-- "*" SubagentResult
+Source o-- Origin
+ExecutionResult ..> AgentExecutionContext : projected from
+
+@enduml

@@ -1,0 +1,47 @@
+@startuml src
+title src — the onion (packages and inward-pointing dependencies)
+
+skinparam linetype ortho
+skinparam rectangle {
+        BackgroundColor #F7F7F7
+        BorderColor #888888
+}
+
+legend left
+  --> depends on (arrows point inward; never the reverse)
+  main.py / agent.cli wire adapters at the edge
+endlegend
+
+rectangle "ring 2 — application" {
+        rectangle "agent" as agent
+        rectangle "prompts" as prompts
+}
+
+rectangle "ring 1 — harness + services" {
+        rectangle "harness" as harness
+        rectangle "rag" as rag
+        rectangle "memory" as memory
+        rectangle "observability" as obs
+}
+
+rectangle "ring 0 — core" {
+        rectangle "llm" as llm
+}
+
+rectangle "main.py\n<<composition root>>" as Main
+
+harness --> llm
+rag --> llm
+memory --> harness
+obs --> harness
+agent --> harness
+agent --> llm
+agent --> rag
+agent --> prompts
+
+Main --> agent
+Main --> memory
+Main --> obs
+Main --> rag
+
+@enduml

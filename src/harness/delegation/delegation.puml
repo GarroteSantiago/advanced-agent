@@ -1,0 +1,40 @@
+@startuml delegation
+title harness.delegation — subagents appear to the model as tools
+
+skinparam linetype ortho
+hide empty methods
+
+legend left
+  ..|> implements
+  o-- holds
+  ..> merges into
+endlegend
+
+interface Describable
+interface Delegate {
+        +delegate(task): SubagentReport
+}
+class SubagentRegistry {
+        +knows(name) / resolve(name)
+        +all()
+}
+class SubagentReport {
+        +agent / output / succeeded
+        +sources / modified_files / observations
+        +completed() / failed()
+}
+class "TaskLedger\n(runtime)" as Ledger
+
+Delegate --|> Describable
+SubagentRegistry o-- "*" Delegate
+Delegate ..> SubagentReport
+SubagentReport ..> Ledger : DelegatingActionPhase\nfolds fields in (copy-on-write)
+
+note bottom of Delegate
+  Describable => the principal's ToolCatalog
+  renders a subagent like a tool, so the model
+  chooses delegation via an ordinary tool call.
+  Concrete Delegates live in agent/ (the team).
+end note
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml rag
+title rag — the retrieval pipeline behind two ports
+
+skinparam linetype ortho
+hide empty methods
+
+legend left
+  o-- holds (injected port)
+  ..> produces / uses
+  ..|> implements
+endlegend
+
+class Chunker {
+        +chunk(text, source): Chunk[]
+}
+class Chunk {
+        +text / source / ordinal
+}
+interface "EmbeddingModel\n(llm port)" as Embed
+interface VectorStore {
+        +add(vecs, chunks)
+        +search(q, k): Retrieved[]
+}
+class NumpyVectorStore {
+        +save() / load()  ' embed once, reuse
+}
+class Retrieved {
+        +score / chunk
+}
+class Indexer {
+        +index(docs): int
+}
+class Retriever {
+        +retrieve(q, k): Retrieved[]
+}
+class "ingest_corpus()" as Ingest
+
+Chunker ..> Chunk
+NumpyVectorStore ..|> VectorStore
+VectorStore ..> Retrieved
+Retrieved o-- Chunk
+
+Indexer o-- Embed
+Indexer o-- VectorStore
+Indexer o-- Chunker
+Retriever o-- Embed
+Retriever o-- VectorStore
+Ingest ..> Indexer
+Ingest ..> NumpyVectorStore
+
+@enduml
