@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advanced Agent - Presentacion</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --ink: #1d232b;
+      --muted: #5e6672;
+      --paper: #fffdf8;
+      --line: #d7d0c2;
+      --teal: #0f766e;
+      --blue: #183a59;
+      --red: #9a3412;
+      --gold: #d19a2e;
+      --green-soft: #e5f2ef;
+      --blue-soft: #e8eef5;
+      --gold-soft: #fbf1d8;
+      --shadow: 0 26px 80px rgba(29, 35, 43, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background:
+        radial-gradient(circle at 86% 14%, rgba(15, 118, 110, 0.16), transparent 28%),
+        linear-gradient(135deg, rgba(24, 58, 89, 0.08), transparent 42%),
+        var(--bg);
+      isolation: isolate;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 22px;
+      padding: 46px 60px 32px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateX(60px) scale(0.985);
+      transition:
+        opacity 520ms ease,
+        transform 620ms cubic-bezier(0.2, 0.7, 0.15, 1),
+        visibility 520ms ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateX(0) scale(1);
+      z-index: 2;
+    }
+
+    .slide.past {
+      transform: translateX(-70px) scale(0.985);
+    }
+
+    .slide.future {
+      transform: translateX(70px) scale(0.985);
+    }
+
+    .slide::after {
+      content: "";
+      position: fixed;
+      inset: auto 0 0;
+      height: 18vh;
+      pointer-events: none;
+      background: linear-gradient(0deg, rgba(244, 241, 234, 0.92), transparent);
+      z-index: -1;
+    }
+
+    .topline,
+    .footer {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 28px;
+      height: 3px;
+      background: var(--teal);
+      border-radius: 999px;
+    }
+
+    .content {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      align-content: center;
+      gap: 26px;
+      min-height: 0;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 1120px;
+      color: var(--blue);
+      font-size: clamp(3.9rem, 8.6vw, 8.8rem);
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      max-width: 1050px;
+      color: var(--blue);
+      font-size: clamp(2.7rem, 5.8vw, 6.1rem);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      color: var(--blue);
+      font-size: clamp(1.08rem, 1.6vw, 1.42rem);
+      line-height: 1.12;
+    }
+
+    .lead {
+      max-width: 880px;
+      color: #303945;
+      font-size: clamp(1.25rem, 2.1vw, 1.9rem);
+      line-height: 1.28;
+    }
+
+    .hero-grid,
+    .split,
+    .diagram-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .hero-grid.title-only {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 1120px;
+    }
+
+    .diagram-layout {
+      grid-template-columns: minmax(0, 1.24fr) minmax(300px, 0.7fr);
+    }
+
+    .center {
+      justify-items: center;
+      text-align: center;
+    }
+
+    .panel,
+    .tile,
+    .diagram {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.9);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 26px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .tile {
+      min-height: 156px;
+      padding: 20px;
+      display: grid;
+      align-content: space-between;
+      overflow: hidden;
+    }
+
+    .tile strong {
+      color: var(--blue);
+      font-size: clamp(1.2rem, 2.1vw, 2rem);
+      line-height: 1;
+    }
+
+    .tile span {
+      color: var(--muted);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .tile.accent {
+      background: var(--green-soft);
+      border-color: rgba(15, 118, 110, 0.26);
+    }
+
+    .tile.gold {
+      background: var(--gold-soft);
+      border-color: rgba(209, 154, 46, 0.32);
+    }
+
+    .tile.blue {
+      background: var(--blue-soft);
+      border-color: rgba(24, 58, 89, 0.26);
+    }
+
+    .number {
+      color: var(--blue);
+      font-size: clamp(3.2rem, 7vw, 7.6rem);
+      font-weight: 950;
+      line-height: 0.82;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tag {
+      display: inline-flex;
+      min-height: 36px;
+      align-items: center;
+      padding: 7px 13px;
+      border: 1px solid rgba(15, 118, 110, 0.3);
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: #0c514b;
+      font-size: 0.9rem;
+      font-weight: 900;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .diagram {
+      padding: 14px;
+      display: grid;
+      min-height: 0;
+      background: #fff;
+    }
+
+    .diagram img {
+      width: 100%;
+      height: 100%;
+      max-height: 67vh;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 5px;
+    }
+
+    .diagram.tall img {
+      max-height: 72vh;
+    }
+
+    .mini-flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .flow-step {
+      min-height: 116px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      padding: 16px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .flow-step b {
+      color: var(--red);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .flow-step span {
+      color: var(--blue);
+      font-size: clamp(1rem, 1.35vw, 1.18rem);
+      font-weight: 900;
+      line-height: 1.08;
+    }
+
+    .agent-map {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .agent {
+      min-height: 145px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      display: grid;
+      align-content: space-between;
+    }
+
+    .agent strong {
+      color: var(--blue);
+      font-size: 1.08rem;
+    }
+
+    .agent span {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .quote {
+      border-left: 5px solid var(--teal);
+      padding-left: 18px;
+      color: #303945;
+      font-size: clamp(1.25rem, 2vw, 1.85rem);
+      line-height: 1.24;
+      font-weight: 800;
+    }
+
+    .tiny {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .progress {
+      width: min(300px, 38vw);
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(24, 58, 89, 0.14);
+    }
+
+    .bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--teal), var(--gold));
+      transition: width 420ms ease;
+    }
+
+    .nav {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 6;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.94);
+      color: var(--blue);
+      box-shadow: 0 12px 28px rgba(29, 35, 43, 0.14);
+      cursor: pointer;
+      font-size: 1.24rem;
+      font-weight: 950;
+    }
+
+    button:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    a {
+      color: var(--teal);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 520ms ease, transform 620ms cubic-bezier(0.2, 0.7, 0.15, 1);
+    }
+
+    .active .reveal {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .active .reveal:nth-child(2) {
+      transition-delay: 80ms;
+    }
+
+    .active .reveal:nth-child(3) {
+      transition-delay: 160ms;
+    }
+
+    .active .reveal:nth-child(4) {
+      transition-delay: 240ms;
+    }
+
+    @media (max-width: 980px) {
+      html,
+      body {
+        overflow: auto;
+      }
+
+      .deck {
+        height: auto;
+      }
+
+      .slide {
+        position: relative;
+        min-height: 100vh;
+        display: none;
+        padding: 34px 22px 28px;
+        transform: none;
+      }
+
+      .slide.active {
+        display: grid;
+      }
+
+      .hero-grid,
+      .split,
+      .diagram-layout,
+      .tiles,
+      .mini-flow,
+      .agent-map {
+        grid-template-columns: 1fr;
+      }
+
+      .agent,
+      .tile {
+        min-height: 120px;
+      }
+
+      .diagram img {
+        max-height: none;
+      }
+    }
+
+    @media print {
+      html,
+      body {
+        overflow: visible;
+        background: #fff;
+      }
+
+      .deck {
+        height: auto;
+        background: #fff;
+      }
+
+      .slide,
+      .slide.active {
+        position: relative;
+        display: grid;
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        min-height: 100vh;
+        page-break-after: always;
+      }
+
+      .nav {
+        display: none;
+      }
+
+      .panel,
+      .tile,
+      .diagram {
+        box-shadow: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide,
+      .bar,
+      .reveal {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-live="polite">
+    <section class="slide active" data-title="Title">
+      <header class="topline">
+        <span class="eyebrow">Advanced Agent</span>
+        <span>Sin LangChain. Sin LangGraph. Construido como software.</span>
+      </header>
+      <div class="content">
+        <div class="hero-grid title-only">
+          <div class="stack">
+            <h1 class="reveal">Agente de codigo inspeccionable</h1>
+            <p class="lead reveal">Delegacion multiagente, RAG, memoria, politicas y trazas en un solo harness de Python.</p>
+            <div class="tag-row reveal">
+              <span class="tag">Python 3.11</span>
+              <span class="tag">uv + just</span>
+              <span class="tag">OpenAI</span>
+              <span class="tag">Tavily</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>Repositorio: advanced-agent</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Goal">
+      <header class="topline">
+        <span class="eyebrow">Caso de uso</span>
+        <span>Analisis verificable de repositorios</span>
+      </header>
+      <div class="content center">
+        <h2 class="reveal">Entra un repo FastAPI desconocido. Sale un informe con evidencia.</h2>
+        <div class="tiles reveal">
+          <div class="tile accent"><strong>Arquitectura</strong><span>entry point + rutas</span></div>
+          <div class="tile blue"><strong>Comandos</strong><span>ejecucion + tests</span></div>
+          <div class="tile gold"><strong>Riesgos</strong><span>basados en archivos y trazas</span></div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/use-case.md</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Architecture">
+      <header class="topline">
+        <span class="eyebrow">Architecture</span>
+        <span>Puertos hacia adentro, adaptadores hacia afuera</span>
+      </header>
+      <div class="content">
+        <div class="diagram-layout">
+          <div class="diagram reveal">
+            <img src="diagrams/ownership.svg" alt="Diagrama de ownership con agent, harness, tools, events, runtime y llm">
+          </div>
+          <div class="panel stack reveal">
+            <h2>Capas tipo onion</h2>
+            <p class="quote">El loop central se puede leer porque no hay magia de framework: hay objetos con nombre.</p>
+            <div class="tag-row">
+              <span class="tag">harness</span>
+              <span class="tag">agent</span>
+              <span class="tag">rag</span>
+              <span class="tag">memory</span>
+              <span class="tag">observability</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/diagrams/ownership.svg</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Loop">
+      <header class="topline">
+        <span class="eyebrow">Loop de ejecucion</span>
+        <span>Driver pequeno, transiciones explicitas</span>
+      </header>
+      <div class="content">
+        <h2 class="reveal">Razonar. Actuar. Observar. Controlar.</h2>
+        <div class="mini-flow reveal">
+          <div class="flow-step"><b>01</b><span>Reason</span></div>
+          <div class="flow-step"><b>02</b><span>Navigate</span></div>
+          <div class="flow-step"><b>03</b><span>Act</span></div>
+          <div class="flow-step"><b>04</b><span>Observe</span></div>
+          <div class="flow-step"><b>05</b><span>Halt o continuar</span></div>
+        </div>
+        <div class="split reveal">
+          <div class="tile accent"><strong>Navigator</strong><span>Continue(next phase) o Halt</span></div>
+          <div class="tile blue"><strong>Context</strong><span>espina immutable entre fases</span></div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>src/harness/loop/agent_loop.py</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Collaboration">
+      <header class="topline">
+        <span class="eyebrow">Un turno</span>
+        <span>Cada mensaje puede trazarse</span>
+      </header>
+      <div class="content">
+        <div class="diagram reveal">
+          <img src="diagrams/runtime-collaboration.svg" alt="Diagrama de runtime collaboration con mensajes durante un turno del agente">
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/diagrams/runtime-collaboration.svg</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Team">
+      <header class="topline">
+        <span class="eyebrow">Team</span>
+        <span>Un coordinador, workers acotados</span>
+      </header>
+      <div class="content">
+        <h2 class="reveal">El modelo delega en roles con permisos limitados.</h2>
+        <div class="agent-map reveal">
+          <div class="agent"><strong>Explorer</strong><span>leer + listar</span></div>
+          <div class="agent"><strong>Researcher</strong><span>RAG + web</span></div>
+          <div class="agent"><strong>Implementer</strong><span>solo propone</span></div>
+          <div class="agent"><strong>Tester</strong><span>comandos</span></div>
+          <div class="agent"><strong>Reviewer</strong><span>revisa resultado</span></div>
+          <div class="agent"><strong>Scribe</strong><span>escribe solo docs</span></div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>src/agent/team.py</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="RAG Memory">
+      <header class="topline">
+        <span class="eyebrow">Conocimiento</span>
+        <span>RAG + memoria persistente</span>
+      </header>
+      <div class="content">
+        <div class="split">
+          <div class="panel stack reveal">
+            <span class="number">275</span>
+            <h3>chunks de documentacion FastAPI en el indice RAG local.</h3>
+            <div class="tag-row">
+              <span class="tag">Chunker</span>
+              <span class="tag">Embeddings</span>
+              <span class="tag">Numpy store</span>
+            </div>
+          </div>
+          <div class="panel stack reveal">
+            <span class="number">7</span>
+            <h3>entradas recordadas antes de la segunda ejecucion real.</h3>
+            <div class="tag-row">
+              <span class="tag">ProjectMemory</span>
+              <span class="tag">JSON store</span>
+              <span class="tag">Run boundary</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/rag-base.md and docs/evidence/task-evidence.md</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Safety Observability">
+      <header class="topline">
+        <span class="eyebrow">Seguridad + trazas</span>
+        <span>Los efectos laterales pasan por control</span>
+      </header>
+      <div class="content">
+        <div class="tiles">
+          <div class="tile accent reveal"><strong>ToolExecutor</strong><span>unico punto de efectos laterales</span></div>
+          <div class="tile blue reveal"><strong>PolicyVerifier</strong><span>deny lists + workspace confinement</span></div>
+          <div class="tile gold reveal"><strong>EventBus</strong><span>eventos de LLM, tools, retrieval y guards</span></div>
+        </div>
+        <div class="panel stack reveal">
+          <span class="number">59</span>
+          <h3>spans de OpenTelemetry capturados en la ejecucion real incluida en el repo.</h3>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/evidence/repo-analysis.otel.jsonl</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Evidence">
+      <header class="topline">
+        <span class="eyebrow">Evidence</span>
+        <span>Dos ejecuciones reales sobre scripts/sample_app</span>
+      </header>
+      <div class="content center">
+        <h2 class="reveal">No es una demo simulada.</h2>
+        <div class="tiles reveal">
+          <div class="tile accent"><span class="number">47</span><span>model calls</span></div>
+          <div class="tile blue"><span class="number">44</span><span>fuentes RAG</span></div>
+          <div class="tile gold"><span class="number">3</span><span>docs del Scribe</span></div>
+        </div>
+        <div class="tag-row reveal">
+          <a class="tag" href="evidence/task-1-analysis.txt">Run 1</a>
+          <a class="tag" href="evidence/task-2-memory-recall.txt">Run 2</a>
+          <a class="tag" href="evidence/analysis/sample_app/research.md">Doc Researcher</a>
+          <a class="tag" href="evidence/analysis/sample_app/test.md">Doc Tester</a>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/evidence/task-evidence.md</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Takeaway">
+      <header class="topline">
+        <span class="eyebrow">Takeaway</span>
+        <span>Que demuestra este trabajo</span>
+      </header>
+      <div class="content">
+        <h2 class="reveal">Un agente puede construirse como infraestructura mantenible.</h2>
+        <div class="tiles reveal">
+          <div class="tile accent"><strong>Seams explicitos</strong><span>loop, tools, memory, RAG, events</span></div>
+          <div class="tile blue"><strong>Autonomia limitada</strong><span>roles, policies, iteration caps</span></div>
+          <div class="tile gold"><strong>Evidencia honesta</strong><span>docs, tests, traces, limitaciones</span></div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>Abrir directamente: docs/presentation.html</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+  </main>
+
+  <nav class="nav" aria-label="Slide navigation">
+    <button type="button" id="prev" aria-label="Diapositiva anterior">&lt;</button>
+    <button type="button" id="next" aria-label="Diapositiva siguiente">&gt;</button>
+  </nav>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const totalNodes = document.querySelectorAll(".slide-total");
+    const numberNodes = document.querySelectorAll(".slide-number");
+    const progress = document.createElement("div");
+    progress.className = "progress";
+    progress.innerHTML = '<div class="bar"></div>';
+    const bar = progress.querySelector(".bar");
+    let index = Number(new URLSearchParams(window.location.search).get("slide") || 1) - 1;
+
+    function clamp(value) {
+      return Math.max(0, Math.min(slides.length - 1, value));
+    }
+
+    function render() {
+      index = clamp(index);
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("active", i === index);
+        slide.classList.toggle("past", i < index);
+        slide.classList.toggle("future", i > index);
+      });
+      totalNodes.forEach((node) => { node.textContent = slides.length; });
+      numberNodes.forEach((node) => { node.textContent = index + 1; });
+      slides[index].querySelector(".footer").appendChild(progress);
+      bar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      document.title = `${slides[index].dataset.title} - Advanced Agent`;
+      history.replaceState(null, "", `?slide=${index + 1}`);
+    }
+
+    function move(delta) {
+      index = clamp(index + delta);
+      render();
+    }
+
+    document.getElementById("prev").addEventListener("click", () => move(-1));
+    document.getElementById("next").addEventListener("click", () => move(1));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        move(1);
+      }
+      if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        move(-1);
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        index = 0;
+        render();
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        index = slides.length - 1;
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
