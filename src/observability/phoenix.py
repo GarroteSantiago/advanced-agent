@@ -15,6 +15,7 @@ extra); the composition root imports it only when observability is enabled.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import cast
 
@@ -128,6 +129,21 @@ def launch_phoenix_tracer(project_name: str = "advanced-agent") -> PhoenixTracer
         import phoenix as px
         from phoenix.otel import register
 
-        px.launch_app()
-        provider = register(project_name=project_name)
+        endpoint = _http_trace_endpoint(os.environ.get("PHOENIX_COLLECTOR_ENDPOINT"))
+        if endpoint is None:
+                px.launch_app(use_temp_dir=False)
+        provider = register(
+                endpoint=endpoint,
+                project_name=project_name,
+                protocol="http/protobuf",
+        )
         return PhoenixTracer(cast(Tracer, provider.get_tracer(project_name)))
+
+
+def _http_trace_endpoint(endpoint: str | None) -> str | None:
+        if endpoint is None:
+                return None
+        endpoint = endpoint.rstrip("/")
+        if endpoint.endswith("/v1/traces"):
+                return endpoint
+        return f"{endpoint}/v1/traces"

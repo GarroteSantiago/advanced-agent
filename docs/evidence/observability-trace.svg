@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">OpenTelemetry trace capture for repo-analysis execution</title>
+  <desc id="desc">Screenshot-style view of the captured repo-analysis trace with one root run, LLM spans, tool spans, agents and timing.</desc>
+  <rect width="1280" height="720" fill="#0f172a"/>
+  <rect x="28" y="24" width="1224" height="672" rx="10" fill="#f8fafc"/>
+  <rect x="28" y="24" width="1224" height="58" rx="10" fill="#111827"/>
+  <text x="54" y="60" fill="#f9fafb" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">OpenTelemetry trace: repo-analysis over scripts/sample_app</text>
+  <text x="1004" y="60" fill="#d1d5db" font-family="Inter, Arial, sans-serif" font-size="15">2026-07-02 19:48-19:52 UTC</text>
+
+  <rect x="54" y="108" width="270" height="92" rx="8" fill="#e0f2fe" stroke="#7dd3fc"/>
+  <text x="76" y="142" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">59</text>
+  <text x="134" y="139" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">spans</text>
+  <text x="76" y="172" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="14">1 root, 27 LLM, 31 tool</text>
+
+  <rect x="348" y="108" width="270" height="92" rx="8" fill="#dcfce7" stroke="#86efac"/>
+  <text x="370" y="142" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">4m03s</text>
+  <text x="370" y="172" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="14">single-rooted agent.run trace</text>
+
+  <rect x="642" y="108" width="270" height="92" rx="8" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="664" y="142" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">123k</text>
+  <text x="758" y="139" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">tokens</text>
+  <text x="664" y="172" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="14">approx. $0.018 in Run 1</text>
+
+  <rect x="936" y="108" width="270" height="92" rx="8" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="958" y="142" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">4</text>
+  <text x="990" y="139" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">agents attributed</text>
+  <text x="958" y="172" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="14">principal, explore, research, test</text>
+
+  <text x="54" y="242" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Trace waterfall</text>
+  <text x="1120" y="242" fill="#64748b" font-family="Inter, Arial, sans-serif" font-size="13">agent.name / span kind</text>
+
+  <g font-family="Inter, Arial, sans-serif" font-size="13">
+    <line x1="188" y1="270" x2="1188" y2="270" stroke="#cbd5e1"/>
+    <line x1="188" y1="310" x2="1188" y2="310" stroke="#e2e8f0"/>
+    <line x1="188" y1="350" x2="1188" y2="350" stroke="#e2e8f0"/>
+    <line x1="188" y1="390" x2="1188" y2="390" stroke="#e2e8f0"/>
+    <line x1="188" y1="430" x2="1188" y2="430" stroke="#e2e8f0"/>
+    <line x1="188" y1="470" x2="1188" y2="470" stroke="#e2e8f0"/>
+    <line x1="188" y1="510" x2="1188" y2="510" stroke="#e2e8f0"/>
+    <line x1="188" y1="550" x2="1188" y2="550" stroke="#e2e8f0"/>
+    <line x1="188" y1="590" x2="1188" y2="590" stroke="#e2e8f0"/>
+
+    <text x="54" y="292" fill="#334155" font-weight="700">agent.run</text>
+    <rect x="188" y="276" width="1000" height="24" rx="4" fill="#1d4ed8"/>
+    <text x="202" y="293" fill="#ffffff">principal root span</text>
+
+    <text x="54" y="332" fill="#334155" font-weight="700">principal</text>
+    <rect x="188" y="316" width="210" height="24" rx="4" fill="#0f766e"/>
+    <rect x="958" y="316" width="230" height="24" rx="4" fill="#0f766e"/>
+    <text x="202" y="333" fill="#ffffff">llm gpt-5-nano</text>
+    <text x="972" y="333" fill="#ffffff">final synthesis LLM</text>
+
+    <text x="54" y="372" fill="#334155" font-weight="700">explore</text>
+    <rect x="226" y="356" width="570" height="24" rx="4" fill="#38bdf8"/>
+    <rect x="328" y="384" width="26" height="12" rx="2" fill="#64748b"/>
+    <rect x="388" y="384" width="26" height="12" rx="2" fill="#64748b"/>
+    <rect x="450" y="384" width="26" height="12" rx="2" fill="#64748b"/>
+    <text x="240" y="373" fill="#082f49">list/read files + partial findings</text>
+
+    <text x="54" y="432" fill="#334155" font-weight="700">research</text>
+    <rect x="508" y="416" width="300" height="24" rx="4" fill="#f59e0b"/>
+    <rect x="536" y="444" width="28" height="12" rx="2" fill="#a16207"/>
+    <rect x="590" y="444" width="28" height="12" rx="2" fill="#a16207"/>
+    <rect x="646" y="444" width="28" height="12" rx="2" fill="#a16207"/>
+    <text x="522" y="433" fill="#451a03">rag_search + web fallback</text>
+
+    <text x="54" y="492" fill="#334155" font-weight="700">test</text>
+    <rect x="742" y="476" width="320" height="24" rx="4" fill="#8b5cf6"/>
+    <rect x="830" y="504" width="70" height="12" rx="2" fill="#6d28d9"/>
+    <rect x="932" y="504" width="82" height="12" rx="2" fill="#6d28d9"/>
+    <text x="756" y="493" fill="#ffffff">pytest command spans</text>
+
+    <text x="188" y="628" fill="#64748b">0s</text>
+    <text x="430" y="628" fill="#64748b">1m</text>
+    <text x="676" y="628" fill="#64748b">2m</text>
+    <text x="922" y="628" fill="#64748b">3m</text>
+    <text x="1160" y="628" fill="#64748b">4m</text>
+  </g>
+
+  <rect x="54" y="650" width="1152" height="28" rx="6" fill="#e5e7eb"/>
+  <text x="70" y="669" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="13">Source artifact: docs/evidence/repo-analysis.otel.jsonl. Captured through the OpenTelemetry/Phoenix boundary; the repo stores the headless trace file.</text>
+</svg>

@@ -74,15 +74,38 @@ OBSERVABILITY=otel-file OTEL_TRACE_FILE=docs/evidence/repo-analysis.otel.jsonl \
 Regenerates `docs/evidence/repo-analysis.otel.jsonl` (a run root + `llm`/`tool`
 spans, per-agent attributed). See [`docs/evidence/README.md`](evidence/README.md).
 
-## 4. Phoenix UI screenshot (§9.7, optional)
+## 4. Persistent Phoenix UI screenshots (§9.7)
 
-Only this deliverable needs a human (headless can't screenshot a UI):
+Start Phoenix with a persistent working directory in one terminal:
 
 ```sh
 uv sync --extra observability
-OBSERVABILITY=phoenix uv run python scripts/analyze_repo.py
-# a local Phoenix UI launches — screenshot the trace view
+mkdir -p .phoenix
+
+PHOENIX_WORKING_DIR=.phoenix \
+PHOENIX_PORT=6007 \
+PHOENIX_GRPC_PORT=4318 \
+uv run phoenix serve
 ```
+
+Run the analysis against that server in another terminal:
+
+```sh
+PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6007 \
+OBSERVABILITY=phoenix \
+uv run python scripts/analyze_repo.py
+```
+
+Open `http://localhost:6007` and capture:
+
+- `docs/evidence/phoenix-trace-tree.png` — `agent.run` expanded with LLM/tool
+  child spans.
+- `docs/evidence/phoenix-llm-attributes.png` — one `llm gpt-5-nano` span on the
+  Attributes tab showing tokens, latency, cost, model and `agent.name`.
+
+Because the server uses `PHOENIX_WORKING_DIR=.phoenix`, the trace data is
+available again after a restart when Phoenix is launched with the same working
+directory.
 
 ## 5. Verify the codebase
 

@@ -278,23 +278,105 @@
     }
 
     .diagram {
+      position: relative;
       padding: 14px;
       display: grid;
+      place-items: center;
       min-height: 0;
       background: #fff;
     }
 
-    .diagram img {
+    .diagram img,
+    .diagram object {
       width: 100%;
-      height: 100%;
+      height: min(67vh, 660px);
       max-height: 67vh;
       object-fit: contain;
       object-position: center;
       border-radius: 5px;
     }
 
-    .diagram.tall img {
+    .diagram.tall img,
+    .diagram.tall object {
       max-height: 72vh;
+    }
+
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .screenshot-grid .diagram {
+      align-content: stretch;
+    }
+
+    .screenshot-grid .diagram img {
+      height: min(58vh, 620px);
+      max-height: 58vh;
+      border: 1px solid rgba(24, 58, 89, 0.12);
+    }
+
+    .diagram-zoom {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: auto;
+      min-width: 44px;
+      padding: 0 12px;
+      z-index: 4;
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+
+    .zoom-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      grid-template-rows: auto 1fr;
+      background: rgba(12, 18, 26, 0.86);
+    }
+
+    .zoom-modal.open {
+      display: grid;
+    }
+
+    .zoom-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+
+    .zoom-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .zoom-controls button {
+      width: auto;
+      min-width: 44px;
+      padding: 0 12px;
+      background: rgba(255, 253, 248, 0.96);
+    }
+
+    .zoom-stage {
+      overflow: auto;
+      padding: 18px;
+      background: #fff;
+    }
+
+    .zoom-stage img {
+      display: block;
+      max-width: none;
+      width: 100%;
+      height: auto;
     }
 
     .mini-flow {
@@ -364,6 +446,32 @@
       font-size: clamp(1.25rem, 2vw, 1.85rem);
       line-height: 1.24;
       font-weight: 800;
+    }
+
+    .code-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: #303945;
+      font-size: clamp(0.98rem, 1.25vw, 1.15rem);
+      line-height: 1.25;
+      font-weight: 760;
+    }
+
+    .code-list li {
+      padding: 10px 12px;
+      border: 1px solid rgba(24, 58, 89, 0.14);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.68);
+    }
+
+    code {
+      color: #0c514b;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+      font-weight: 850;
     }
 
     .tiny {
@@ -553,17 +661,17 @@
       </footer>
     </section>
 
-    <section class="slide" data-title="Goal">
+    <section class="slide" data-title="Use Case">
       <header class="topline">
-        <span class="eyebrow">Caso de uso</span>
-        <span>Analisis verificable de repositorios</span>
+        <span class="eyebrow">Use case</span>
+        <span>Analisis verificable de repositorios FastAPI</span>
       </header>
       <div class="content center">
-        <h2 class="reveal">Entra un repo FastAPI desconocido. Sale un informe con evidencia.</h2>
+        <h2 class="reveal">El sistema recibe un repo desconocido y produce un informe tecnico auditable.</h2>
         <div class="tiles reveal">
-          <div class="tile accent"><strong>Arquitectura</strong><span>entry point + rutas</span></div>
-          <div class="tile blue"><strong>Comandos</strong><span>ejecucion + tests</span></div>
-          <div class="tile gold"><strong>Riesgos</strong><span>basados en archivos y trazas</span></div>
+          <div class="tile accent"><strong>Entrada</strong><span><code>scripts/sample_app</code></span></div>
+          <div class="tile blue"><strong>Salida</strong><span>arquitectura, rutas, dependencias, comandos</span></div>
+          <div class="tile gold"><strong>Criterio</strong><span>evidencia en archivos, RAG, tests y trazas</span></div>
         </div>
       </div>
       <footer class="footer">
@@ -580,7 +688,8 @@
       <div class="content">
         <div class="diagram-layout">
           <div class="diagram reveal">
-            <img src="diagrams/ownership.svg" alt="Diagrama de ownership con agent, harness, tools, events, runtime y llm">
+            <object data="diagrams/ownership.svg" type="image/svg+xml" aria-label="Diagrama de ownership con agent, harness, tools, events, runtime y llm"></object>
+            <button class="diagram-zoom" type="button" data-zoom-src="diagrams/ownership.svg" data-zoom-title="Ownership diagram">Zoom</button>
           </div>
           <div class="panel stack reveal">
             <h2>Capas tipo onion</h2>
@@ -633,7 +742,8 @@
       </header>
       <div class="content">
         <div class="diagram reveal">
-          <img src="diagrams/runtime-collaboration.svg" alt="Diagrama de runtime collaboration con mensajes durante un turno del agente">
+          <object data="diagrams/runtime-collaboration.svg" type="image/svg+xml" aria-label="Diagrama de runtime collaboration con mensajes durante un turno del agente"></object>
+          <button class="diagram-zoom" type="button" data-zoom-src="diagrams/runtime-collaboration.svg" data-zoom-title="Runtime collaboration">Zoom</button>
         </div>
       </div>
       <footer class="footer">
@@ -642,57 +752,82 @@
       </footer>
     </section>
 
-    <section class="slide" data-title="Team">
+    <section class="slide" data-title="Agent Roles">
       <header class="topline">
-        <span class="eyebrow">Team</span>
-        <span>Un coordinador, workers acotados</span>
+        <span class="eyebrow">Agents roles</span>
+        <span>Principal, secundarios y estado compartido</span>
       </header>
       <div class="content">
-        <h2 class="reveal">El modelo delega en roles con permisos limitados.</h2>
+        <h2 class="reveal">Un principal coordina subagentes especializados sobre un ledger compartido.</h2>
         <div class="agent-map reveal">
-          <div class="agent"><strong>Explorer</strong><span>leer + listar</span></div>
-          <div class="agent"><strong>Researcher</strong><span>RAG + web</span></div>
-          <div class="agent"><strong>Implementer</strong><span>solo propone</span></div>
-          <div class="agent"><strong>Tester</strong><span>comandos</span></div>
-          <div class="agent"><strong>Reviewer</strong><span>revisa resultado</span></div>
-          <div class="agent"><strong>Scribe</strong><span>escribe solo docs</span></div>
+          <div class="agent"><strong>Principal</strong><span>recibe tarea, delega y sintetiza</span></div>
+          <div class="agent"><strong>Explorer</strong><span><code>read_file</code> + <code>list_files</code></span></div>
+          <div class="agent"><strong>Researcher</strong><span><code>rag_search</code> + web fallback</span></div>
+          <div class="agent"><strong>Tester</strong><span><code>run_command</code> permitido</span></div>
+          <div class="agent"><strong>Reviewer</strong><span>valida respuesta y gaps</span></div>
+          <div class="agent"><strong>Scribe</strong><span>unico escritor, confinado a docs</span></div>
+        </div>
+        <div class="split reveal">
+          <div class="tile accent"><strong>Shared state</strong><span><code>TaskLedger</code>: request, sources, reports, modified files</span></div>
+          <div class="tile blue"><strong>Merge</strong><span>cada subagente devuelve reportes integrados al ledger</span></div>
         </div>
       </div>
       <footer class="footer">
-        <span>src/agent/team.py</span>
+        <span>src/agent/team.py and src/harness/runtime/ledger.py</span>
         <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
       </footer>
     </section>
 
-    <section class="slide" data-title="RAG Memory">
+    <section class="slide" data-title="RAG Documentation">
       <header class="topline">
-        <span class="eyebrow">Conocimiento</span>
-        <span>RAG + memoria persistente</span>
+        <span class="eyebrow">RAG documentation</span>
+        <span>Fuentes, chunking y embeddings</span>
       </header>
       <div class="content">
         <div class="split">
           <div class="panel stack reveal">
             <span class="number">275</span>
-            <h3>chunks de documentacion FastAPI en el indice RAG local.</h3>
+            <h3>chunks de documentacion FastAPI indexados localmente.</h3>
             <div class="tag-row">
-              <span class="tag">Chunker</span>
-              <span class="tag">Embeddings</span>
-              <span class="tag">Numpy store</span>
+              <span class="tag">21 docs FastAPI</span>
+              <span class="tag">source path</span>
+              <span class="tag">overlap</span>
             </div>
           </div>
           <div class="panel stack reveal">
-            <span class="number">7</span>
-            <h3>entradas recordadas antes de la segunda ejecucion real.</h3>
-            <div class="tag-row">
-              <span class="tag">ProjectMemory</span>
-              <span class="tag">JSON store</span>
-              <span class="tag">Run boundary</span>
-            </div>
+            <h3>Pipeline de recuperacion</h3>
+            <ul class="code-list">
+              <li><code>Chunker</code> produce <code>Chunk(text, source, ordinal)</code>.</li>
+              <li><code>OpenAIEmbeddingModel</code> usa <code>text-embedding-3-small</code>.</li>
+              <li><code>Retriever</code> hace top-k por similitud coseno.</li>
+              <li>Cada hit se registra como <code>Source(Origin.RAG)</code>.</li>
+            </ul>
           </div>
         </div>
       </div>
       <footer class="footer">
-        <span>docs/rag-base.md and docs/evidence/task-evidence.md</span>
+        <span>docs/rag-base.md and src/rag/</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Storage">
+      <header class="topline">
+        <span class="eyebrow">Storage selected</span>
+        <span>Persistencia simple, local y testeable</span>
+      </header>
+      <div class="content">
+        <div class="tiles">
+          <div class="tile accent reveal"><strong>RAG index</strong><span><code>NumpyVectorStore</code>: <code>embeddings.npy</code> + <code>chunks.json</code></span></div>
+          <div class="tile blue reveal"><strong>Memory</strong><span><code>JsonMemoryStore</code>: una memoria por proyecto</span></div>
+          <div class="tile gold reveal"><strong>Evidence</strong><span>trazas OTel y docs del Scribe versionables</span></div>
+        </div>
+        <div class="panel stack reveal">
+          <p class="quote">No se eligio una base vectorial externa porque el corpus es acotado; numpy + JSON reducen dependencias y hacen la ejecucion reproducible.</p>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>src/rag/store.py and src/memory/store.py</span>
         <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
       </footer>
     </section>
@@ -719,55 +854,117 @@
       </footer>
     </section>
 
-    <section class="slide" data-title="Evidence">
+    <section class="slide" data-title="Execution Run 1">
       <header class="topline">
-        <span class="eyebrow">Evidence</span>
-        <span>Dos ejecuciones reales sobre scripts/sample_app</span>
+        <span class="eyebrow">Execution 1</span>
+        <span>Primera ejecucion del caso de uso</span>
       </header>
-      <div class="content center">
-        <h2 class="reveal">No es una demo simulada.</h2>
+      <div class="content">
+        <h2 class="reveal">Run 1 analiza el repo desde cero y produce el informe base.</h2>
         <div class="tiles reveal">
-          <div class="tile accent"><span class="number">47</span><span>model calls</span></div>
-          <div class="tile blue"><span class="number">44</span><span>fuentes RAG</span></div>
-          <div class="tile gold"><span class="number">3</span><span>docs del Scribe</span></div>
+          <div class="tile accent"><strong>Output</strong><span>entry point, <code>APIRouter</code>, endpoints, riesgos, comandos</span></div>
+          <div class="tile blue"><strong>Sources</strong><span>44 fuentes RAG</span></div>
+          <div class="tile gold"><strong>Observed</strong><span>47 model calls, pytest PASS, 4 partial findings por cap</span></div>
         </div>
         <div class="tag-row reveal">
-          <a class="tag" href="evidence/task-1-analysis.txt">Run 1</a>
-          <a class="tag" href="evidence/task-2-memory-recall.txt">Run 2</a>
-          <a class="tag" href="evidence/analysis/sample_app/research.md">Doc Researcher</a>
-          <a class="tag" href="evidence/analysis/sample_app/test.md">Doc Tester</a>
+          <a class="tag" href="evidence/task-1-analysis.txt">task-1-analysis.txt</a>
+          <a class="tag" href="evidence/analysis/sample_app/explore.md">Explorer output</a>
+          <a class="tag" href="evidence/analysis/sample_app/research.md">Researcher output</a>
         </div>
       </div>
       <footer class="footer">
-        <span>docs/evidence/task-evidence.md</span>
+        <span>docs/evidence/task-1-analysis.txt</span>
         <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
       </footer>
     </section>
 
-    <section class="slide" data-title="Takeaway">
+    <section class="slide" data-title="Execution Run 2">
       <header class="topline">
-        <span class="eyebrow">Takeaway</span>
-        <span>Que demuestra este trabajo</span>
+        <span class="eyebrow">Execution 2</span>
+        <span>Segunda ejecucion con memoria recuperada</span>
       </header>
       <div class="content">
-        <h2 class="reveal">Un agente puede construirse como infraestructura mantenible.</h2>
+        <h2 class="reveal">Run 2 demuestra memoria persistente y vuelve a recuperar fuentes tecnicas.</h2>
         <div class="tiles reveal">
-          <div class="tile accent"><strong>Seams explicitos</strong><span>loop, tools, memory, RAG, events</span></div>
-          <div class="tile blue"><strong>Autonomia limitada</strong><span>roles, policies, iteration caps</span></div>
-          <div class="tile gold"><strong>Evidencia honesta</strong><span>docs, tests, traces, limitaciones</span></div>
+          <div class="tile accent"><strong>Output</strong><span>arquitectura, comandos y riesgos revalidados</span></div>
+          <div class="tile blue"><strong>Sources</strong><span>16 fuentes RAG + 7 entradas de memoria</span></div>
+          <div class="tile gold"><strong>Observed</strong><span>26 model calls, 29 tools, 2 partial findings, menor costo</span></div>
+        </div>
+        <div class="panel stack reveal">
+          <p class="quote">Lo importante observado: la segunda corrida arranca briefed por memoria de proyecto, no solo por contexto del modelo.</p>
         </div>
       </div>
       <footer class="footer">
-        <span>Abrir directamente: docs/presentation.html</span>
+        <span>docs/evidence/task-2-memory-recall.txt</span>
         <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
       </footer>
     </section>
+
+    <section class="slide" data-title="Observability Trace">
+      <header class="topline">
+        <span class="eyebrow">Observability</span>
+        <span>Phoenix UI con trazas persistidas</span>
+      </header>
+      <div class="content">
+        <div class="screenshot-grid">
+          <div class="diagram reveal">
+            <img src="evidence/phoenix-trace-tree.png" alt="Phoenix trace tree showing agent.run with LLM and tool child spans">
+            <button class="diagram-zoom" type="button" data-zoom-src="evidence/phoenix-trace-tree.png" data-zoom-title="Phoenix trace tree">Zoom</button>
+          </div>
+          <div class="diagram reveal">
+            <img src="evidence/phoenix-llm-attributes.png" alt="Phoenix LLM span attributes showing token counts, latency, cost, model, and agent name">
+            <button class="diagram-zoom" type="button" data-zoom-src="evidence/phoenix-llm-attributes.png" data-zoom-title="Phoenix LLM attributes">Zoom</button>
+          </div>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/evidence/phoenix-trace-tree.png + phoenix-llm-attributes.png</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
+    <section class="slide" data-title="Reflection">
+      <header class="topline">
+        <span class="eyebrow">Reflection</span>
+        <span>Que funciono, que no y mejoras</span>
+      </header>
+      <div class="content">
+        <div class="tiles">
+          <div class="tile accent reveal"><strong>Funciono</strong><span>loop propio, ledger immutable, policies, RAG y trazas testeables</span></div>
+          <div class="tile blue reveal"><strong>No perfecto</strong><span>modelo chico subdelega; algunos subagentes llegan al iteration cap</span></div>
+          <div class="tile gold reveal"><strong>Mejoras</strong><span>semantic summarizer, auto-tag repo/web sources, memory digest, AwaitInput</span></div>
+        </div>
+        <div class="panel stack reveal">
+          <p class="quote">La leccion principal: la orquestacion confiable debe estar en codigo; no conviene pedirle al modelo que recuerde coordinar todo.</p>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>docs/reflection.md</span>
+        <span><span class="slide-number"></span>/<span class="slide-total"></span></span>
+      </footer>
+    </section>
+
   </main>
 
   <nav class="nav" aria-label="Slide navigation">
     <button type="button" id="prev" aria-label="Diapositiva anterior">&lt;</button>
     <button type="button" id="next" aria-label="Diapositiva siguiente">&gt;</button>
   </nav>
+
+  <div class="zoom-modal" id="zoom-modal" aria-hidden="true" role="dialog" aria-label="Zoomed diagram">
+    <div class="zoom-toolbar">
+      <span id="zoom-title">Diagram</span>
+      <div class="zoom-controls">
+        <button type="button" id="zoom-out" aria-label="Zoom out">-</button>
+        <button type="button" id="zoom-reset" aria-label="Reset zoom">100%</button>
+        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" id="zoom-close" aria-label="Close zoom">Close</button>
+      </div>
+    </div>
+    <div class="zoom-stage">
+      <img id="zoom-image" alt="">
+    </div>
+  </div>
 
   <script>
     const slides = Array.from(document.querySelectorAll(".slide"));
@@ -778,6 +975,11 @@
     progress.innerHTML = '<div class="bar"></div>';
     const bar = progress.querySelector(".bar");
     let index = Number(new URLSearchParams(window.location.search).get("slide") || 1) - 1;
+    const zoomModal = document.getElementById("zoom-modal");
+    const zoomImage = document.getElementById("zoom-image");
+    const zoomTitle = document.getElementById("zoom-title");
+    const zoomReset = document.getElementById("zoom-reset");
+    let zoomScale = 1;
 
     function clamp(value) {
       return Math.max(0, Math.min(slides.length - 1, value));
@@ -803,9 +1005,65 @@
       render();
     }
 
+    function setZoom(scale) {
+      zoomScale = Math.max(0.5, Math.min(4, scale));
+      zoomImage.style.width = `${zoomScale * 100}%`;
+      zoomReset.textContent = `${Math.round(zoomScale * 100)}%`;
+    }
+
+    function openZoom(src, title) {
+      zoomImage.src = src;
+      zoomImage.alt = title;
+      zoomTitle.textContent = title;
+      zoomModal.classList.add("open");
+      zoomModal.setAttribute("aria-hidden", "false");
+      setZoom(1);
+    }
+
+    function closeZoom() {
+      zoomModal.classList.remove("open");
+      zoomModal.setAttribute("aria-hidden", "true");
+      zoomImage.removeAttribute("src");
+    }
+
+    document.querySelectorAll("[data-zoom-src]").forEach((button) => {
+      button.addEventListener("click", () => {
+        openZoom(button.dataset.zoomSrc, button.dataset.zoomTitle || "Diagram");
+      });
+    });
+
+    document.getElementById("zoom-in").addEventListener("click", () => setZoom(zoomScale + 0.25));
+    document.getElementById("zoom-out").addEventListener("click", () => setZoom(zoomScale - 0.25));
+    document.getElementById("zoom-reset").addEventListener("click", () => setZoom(1));
+    document.getElementById("zoom-close").addEventListener("click", closeZoom);
+    zoomModal.addEventListener("click", (event) => {
+      if (event.target === zoomModal) {
+        closeZoom();
+      }
+    });
+
     document.getElementById("prev").addEventListener("click", () => move(-1));
     document.getElementById("next").addEventListener("click", () => move(1));
     document.addEventListener("keydown", (event) => {
+      if (zoomModal.classList.contains("open")) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeZoom();
+        }
+        if (event.key === "+" || event.key === "=") {
+          event.preventDefault();
+          setZoom(zoomScale + 0.25);
+        }
+        if (event.key === "-") {
+          event.preventDefault();
+          setZoom(zoomScale - 0.25);
+        }
+        if (event.key === "0") {
+          event.preventDefault();
+          setZoom(1);
+        }
+        return;
+      }
       if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
         event.preventDefault();
         move(1);

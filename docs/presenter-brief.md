@@ -1,386 +1,406 @@
-# Guion de preparacion para la presentacion final
+# Guion de presentacion final
 
-Este documento es para que cualquier integrante pueda presentar el proyecto sin
-tener que leer todo el repositorio. La idea es entender el relato, saber que
-demuestra cada slide y poder responder preguntas tecnicas del examen.
+Este guion acompana `docs/presentation.html`. Esta actualizado para la version
+con evidencia real en Phoenix: una captura del arbol de trazas y otra de los
+atributos de un span LLM.
 
-## Resumen en 60 segundos
+## Relato central
 
-`advanced-agent` es un harness de agente de codigo escrito en Python. No usa
-LangChain, LangGraph ni frameworks de orquestacion: el loop, la delegacion, las
-herramientas, la memoria, RAG, las politicas y la observabilidad estan
-implementados como componentes propios.
+Construimos un agente de codigo inspeccionable en Python. No usamos LangChain ni
+LangGraph: el loop, la delegacion, las tools, la memoria, RAG, las politicas y
+la observabilidad estan implementados como componentes propios.
 
-El caso de uso elegido es analizar un repositorio FastAPI desconocido y generar
-un informe verificable: arquitectura, rutas, dependencias, comandos utiles,
-riesgos y evidencia. El agente principal coordina subagentes especializados y,
-al final, un `Scribe` escribe los resultados en una carpeta de documentacion.
+El caso de uso es concreto y verificable: analizar un repositorio FastAPI
+desconocido (`scripts/sample_app`) y producir un informe con arquitectura,
+rutas, dependencias, riesgos, comandos y evidencia.
 
-Lo importante para defender no es solo que "usa IA". Lo importante es que el
-agente esta construido como software inspeccionable: tiene objetos con
-responsabilidades claras, tests, limites de seguridad, trazas y evidencia real
-de ejecucion.
+La tesis de la presentacion:
 
-## Como contar la historia
+> Un agente avanzado no deberia ser solo un prompt grande con tools. Puede ser
+> infraestructura mantenible: con boundaries claros, estado auditable, permisos,
+> memoria, RAG, tests y trazas persistidas.
 
-La presentacion sigue este orden:
+## Resumen de 60 segundos
 
-1. Que construimos.
-2. Que problema concreto resuelve.
-3. Como esta organizado internamente.
-4. Como funciona el loop de razonamiento.
-5. Como colaboran los objetos en runtime.
-6. Como se divide el trabajo entre subagentes.
-7. Como usa RAG y memoria persistente.
-8. Como controla efectos laterales y genera trazas.
-9. Que evidencia real hay.
-10. Cual es la conclusion tecnica.
+`advanced-agent` ejecuta una tarea de analisis de repositorio mediante un agente
+principal y subagentes especializados. El principal coordina, los subagentes
+exploran, investigan, prueban o documentan, y todo se acumula en un
+`TaskLedger`.
 
-La frase central: **construimos un agente avanzado como una pieza de
-infraestructura mantenible, no como un prompt grande pegado a herramientas.**
+La ejecucion queda documentada de tres maneras:
 
-## Guion por diapositiva
+- Evidencia textual: `docs/evidence/task-1-analysis.txt` y
+  `docs/evidence/task-2-memory-recall.txt`.
+- Documentacion escrita por el `Scribe`: `docs/evidence/analysis/sample_app/`.
+- Observabilidad: Phoenix muestra un root span `agent.run`, spans `llm` y
+  `tool`, costos, latencia, tokens y atribucion por agente.
 
-### 1. Advanced Agent
+## Guion por slide
 
-Mensaje: este proyecto es un agente de codigo inspeccionable.
+### 1. Title - Agente de codigo inspeccionable
 
-Que decir:
-- "Es un harness propio en Python para ejecutar un agente de codigo."
-- "Tiene delegacion multiagente, RAG, memoria persistente, politicas y
+Mensaje: este proyecto es un agente de codigo construido como software, no como
+una demo opaca.
+
+Decir:
+
+- "Este es un harness propio en Python para un agente de codigo."
+- "Tiene multiagente, RAG, memoria persistente, politicas de seguridad y
   observabilidad."
-- "La decision clave fue no usar LangChain ni LangGraph, para que cada mecanismo
-  sea visible y testeable."
+- "La restriccion importante fue no delegar la orquestacion en un framework:
+  queriamos poder explicar y testear cada mecanismo."
 
-Prueba en el repo:
+Pruebas:
+
 - `README.md`
 - `src/harness/`
 - `src/agent/`
 - `src/tests/`
 
-### 2. Caso de uso
+### 2. Use Case - Analisis verificable de repositorios FastAPI
 
-Mensaje: el agente analiza un repo FastAPI desconocido y produce un informe
-verificable.
+Mensaje: elegimos un caso que se puede corregir objetivamente.
 
-Que decir:
-- "Elegimos este caso porque se puede corregir objetivamente."
-- "Si el informe dice cual es el entry point, como se conectan las rutas o que
-  comando corre los tests, eso se puede comprobar en archivos reales."
-- "No es una tarea estetica; es una tarea verificable."
+Decir:
 
-Prueba en el repo:
+- "El input es `scripts/sample_app`, un proyecto FastAPI pequeno."
+- "El output esperado no es subjetivo: entry point, routers, endpoints,
+  dependencias, comandos y riesgos se verifican contra archivos reales."
+- "Por eso sirve para demostrar un agente auditable."
+
+Pruebas:
+
 - `docs/use-case.md`
 - `scripts/sample_app/`
 - `docs/evidence/task-evidence.md`
 
-### 3. Arquitectura
+### 3. Architecture - Capas tipo onion
 
-Mensaje: la arquitectura usa capas tipo onion.
+Mensaje: el core no depende de proveedores externos.
 
-Que decir:
-- "En el centro estan los conceptos puros: loop, runtime, tools, eventos,
-  ledger."
-- "Hacia afuera estan los adaptadores: OpenAI, web search, filesystem,
-  observabilidad, JSON memory."
-- "Los puertos apuntan hacia adentro. Eso permite testear con fakes y cambiar
-  proveedores sin cambiar el core."
+Decir:
 
-Terminos que deben sonar:
+- "En el centro estan el loop, runtime, ledger, events, tools y policies."
+- "En el borde estan OpenAI, Tavily, filesystem, memoria JSON, RAG y Phoenix."
+- "Los puertos apuntan hacia adentro, asi podemos usar fakes en tests y cambiar
+  adaptadores sin reescribir el core."
+
+Terminos clave:
+
 - `ChatModel`
 - `EmbeddingModel`
 - `ToolInterface`
 - `Approver`
 - `MemoryStore`
 
-Prueba en el repo:
+Pruebas:
+
 - `docs/architecture.md`
 - `docs/diagrams/ownership.svg`
 - `src/llm/ports/`
 - `src/harness/tools/`
 
-### 4. Loop de ejecucion
+### 4. Loop - Ciclo explicito de ejecucion
 
-Mensaje: el loop es pequeno y las transiciones son explicitas.
+Mensaje: el loop es pequeno y las transiciones son controladas.
 
-Que decir:
-- "`AgentLoop` no decide inteligencia. Solo ejecuta una fase y pregunta al
-  `Navigator` que sigue."
-- "Las fases son el ciclo ReAct: `Reason`, `Act`, `Observe`."
-- "El `Navigator` devuelve `Continue(next phase)` o `Halt`; no hay `None`
-  ambiguo."
+Decir:
 
-Prueba en el repo:
+- "`AgentLoop` ejecuta fases, pero no mezcla todas las responsabilidades."
+- "Las fases siguen un ReAct simple: reason, act, observe."
+- "`Navigator` decide la siguiente fase con una tabla explicita: continue o
+  halt."
+- "Esto hace que el comportamiento sea testeable y no dependa de convenciones
+  invisibles."
+
+Pruebas:
+
 - `src/harness/loop/agent_loop.py`
 - `src/harness/loop/navigator.py`
 - `src/harness/loop/phases/`
 
-### 5. Un turno
+### 5. Collaboration - Un turno en runtime
 
-Mensaje: durante un turno se puede seguir cada llamada entre objetos.
+Mensaje: cada llamada importante entre objetos se puede seguir.
 
-Que decir:
-- "La conversacion entra por `Session`."
-- "`AgentLoop` corre fases."
+Decir:
+
+- "`Session` recibe la tarea."
+- "`AgentLoop` corre las fases."
 - "`ReasonPhase` llama al modelo."
 - "`ActionPhase` pasa por `ToolExecutor`."
-- "`ObservationPhase` actualiza contexto y consulta controles."
-- "Todo publica eventos en `EventBus`."
+- "`ObservationPhase` actualiza contexto y controles."
+- "Todo publica eventos en `EventBus`, que alimenta CLI, auditoria y trazas."
 
-Prueba en el repo:
+Pruebas:
+
 - `docs/diagrams/runtime-collaboration.svg`
-- `docs/diagrams/sequence.svg`
 - `src/harness/events/`
+- `src/harness/runtime/`
 
-### 6. Equipo de subagentes
+### 6. Agent Roles - Principal y subagentes
 
-Mensaje: el agente principal coordina roles con herramientas y permisos
-diferentes.
+Mensaje: la delegacion tiene roles, permisos y estado compartido.
 
-Que decir:
-- "`Explorer` mira estructura y archivos."
-- "`Researcher` usa RAG y web."
-- "`Implementer` propone cambios, pero no escribe."
+Decir:
+
+- "El principal coordina y sintetiza."
+- "`Explorer` lee estructura y archivos."
+- "`Researcher` usa RAG y web fallback."
 - "`Tester` puede ejecutar comandos."
-- "`Reviewer` valida la respuesta."
-- "`Scribe` es el unico escritor y solo escribe documentacion."
+- "`Reviewer` valida gaps."
+- "`Scribe` es el unico escritor y esta confinado a docs."
+- "Los subagentes devuelven `SubagentReport`; el resultado se mezcla en el
+  `TaskLedger`."
 
-Punto importante:
-- El `Scribe` no depende de que el modelo se acuerde de llamarlo bien. Se invoca
-  al final con el ledger completo mediante `Documenter`.
+Pruebas:
 
-Prueba en el repo:
 - `src/agent/team.py`
 - `src/agent/subagent.py`
 - `src/agent/documenter.py`
+- `src/harness/runtime/ledger.py`
 
-### 7. RAG y memoria persistente
+### 7. RAG Documentation - Fuentes y embeddings
 
-Mensaje: el agente no depende solo de memoria del modelo.
+Mensaje: el agente no responde solo desde conocimiento del modelo.
 
-Que decir:
-- "El `Researcher` consulta primero `rag_search` sobre una base FastAPI."
-- "El corpus se chunkifica, se embebe y se guarda en un `NumpyVectorStore`."
-- "Cada resultado recuperado se registra como `Source(Origin.RAG)`."
-- "La memoria persistente guarda aprendizajes del proyecto entre ejecuciones."
+Decir:
 
-Numeros a recordar:
-- Aproximadamente 275 chunks del corpus FastAPI.
-- En la segunda ejecucion se recordaron 7 entradas de memoria.
+- "El `Researcher` consulta primero `rag_search` sobre documentacion FastAPI."
+- "El corpus se divide en chunks, se embebe y se guarda localmente."
+- "Cada recuperacion se registra como fuente RAG en el ledger."
+- "Esto permite decir de donde salio la informacion."
 
-Prueba en el repo:
+Numeros:
+
+- Aproximadamente 275 chunks de documentacion FastAPI.
+- Embeddings con `text-embedding-3-small`.
+
+Pruebas:
+
 - `docs/rag-base.md`
 - `src/rag/`
 - `src/agent/rag_tool.py`
-- `src/memory/`
-- `docs/evidence/task-2-memory-recall.txt`
 
-### 8. Seguridad y observabilidad
+### 8. Storage - Persistencia simple y local
 
-Mensaje: las acciones con efecto lateral estan controladas y trazadas.
+Mensaje: elegimos almacenamiento simple porque el corpus y la demo son acotados.
 
-Que decir:
-- "`ToolExecutor` es el unico punto por donde pasan herramientas."
-- "Antes de ejecutar, consulta un `Approver`."
-- "`PolicyVerifier` aplica reglas de lectura, escritura, comandos y workspace."
-- "`EventBus` emite eventos de modelo, tools, retrieval, guards y resultado."
-- "La ejecucion real genero 59 spans de OpenTelemetry."
+Decir:
 
-Prueba en el repo:
+- "El indice RAG usa `NumpyVectorStore`: embeddings en `.npy` y chunks en
+  JSON."
+- "La memoria persistente usa `JsonMemoryStore`, una memoria por proyecto."
+- "La evidencia vive en archivos versionables: transcripts, docs del Scribe y
+  trazas."
+- "No necesitamos una base vectorial externa para este tamano; menos
+  dependencias hace mas reproducible la demo."
+
+Pruebas:
+
+- `src/rag/store.py`
+- `src/memory/store.py`
+- `data/rag_index/`
+
+### 9. Safety Observability - Efectos laterales y eventos
+
+Mensaje: las acciones estan controladas y todo queda narrado como eventos.
+
+Decir:
+
+- "`ToolExecutor` es el unico punto de ejecucion de herramientas."
+- "Antes de ejecutar, consulta `Approver` y `PolicyVerifier`."
+- "Las reglas cubren lectura, escritura, comandos y confinement del workspace."
+- "`EventBus` emite llamadas de modelo, tools, retrieval, guards y resultado."
+- "Esos eventos son la base de la auditoria y de los spans OpenTelemetry."
+
+Pruebas:
+
 - `src/harness/tools/executor.py`
 - `src/harness/tools/policy.py`
+- `src/harness/events/`
 - `src/observability/`
-- `docs/evidence/repo-analysis.otel.jsonl`
 
-### 9. Evidencia
+### 10. Execution Run 1 - Primera corrida
 
-Mensaje: hay ejecuciones reales, no solo una arquitectura dibujada.
+Mensaje: no es una arquitectura dibujada; hay ejecucion real.
 
-Que decir:
-- "Run 1 hizo 47 model calls."
-- "Consulto 44 fuentes RAG."
-- "El `Scribe` escribio 3 documentos de agentes."
-- "Run 2 demostro memoria persistente porque recordo entradas anteriores."
+Decir:
 
-Prueba en el repo:
+- "Run 1 analiza `scripts/sample_app` desde cero."
+- "Produce un informe sobre entry point, routers, endpoints, dependencias,
+  riesgos y comandos."
+- "Consulta fuentes RAG y delega a subagentes."
+- "El Scribe escribe documentos por agente."
+
+Pruebas:
+
 - `docs/evidence/task-1-analysis.txt`
-- `docs/evidence/task-2-memory-recall.txt`
 - `docs/evidence/analysis/sample_app/explore.md`
 - `docs/evidence/analysis/sample_app/research.md`
 - `docs/evidence/analysis/sample_app/test.md`
 
-### 10. Conclusion
+### 11. Execution Run 2 - Memoria persistente
 
-Mensaje: el valor del proyecto es que el agente esta construido como
-infraestructura mantenible.
+Mensaje: la segunda corrida prueba que hay memoria entre procesos.
 
-Que decir:
-- "No es solo un prompt largo."
-- "Tiene seams explicitos: loop, tools, memory, RAG, events."
-- "Tiene autonomia limitada: roles, policies, iteration caps."
-- "Tiene evidencia honesta: docs, tests, trazas y limitaciones."
+Decir:
 
-Cerrar con:
-- "La idea principal es que un agente avanzado puede ser verificable,
-  observable y seguro si se disena como software."
+- "Run 2 vuelve a analizar el proyecto, pero arranca con memoria previa."
+- "La memoria no es contexto del chat; se carga desde storage al inicio y se
+  absorbe al final."
+- "Esto demuestra persistencia por proyecto."
 
-## Conceptos clave para estudiar
+Pruebas:
 
-### `AgentLoop`
+- `docs/evidence/task-2-memory-recall.txt`
+- `src/memory/`
+- `data/memory/`
 
-Es el driver del agente. Ejecuta fases y delega la decision de la siguiente fase
-al `Navigator`.
+### 12. Observability Trace - Phoenix persistente
 
-### `Navigator`
+Mensaje: la trazabilidad ahora se ve en Phoenix y se puede conservar reiniciando
+el servidor con el mismo working dir.
 
-Contiene la tabla de transiciones. Devuelve `Continue(next phase)` o `Halt`.
+Decir:
 
-### `AgentExecutionContext`
+- "Antes teniamos un archivo JSONL headless. Ahora tambien guardamos la corrida
+  en Phoenix con un servidor persistente."
+- "El servidor Phoenix se levanta con `PHOENIX_WORKING_DIR=.phoenix`; si muere,
+  se reinicia con el mismo directorio y la traza sigue disponible."
+- "La captura izquierda muestra el arbol: `agent.run` como root, spans `llm
+  gpt-5-nano` y spans `tool` para explore, list_files, read_file, rag_search."
+- "La captura derecha abre un span LLM y muestra tokens, latencia, costo, modelo
+  y `agent.name`."
+- "Eso prueba trazabilidad end-to-end y observabilidad por operacion."
 
-Contexto inmutable que viaja por las fases. Cada cambio devuelve una nueva
-version.
+Comandos usados para el enfoque nuevo:
 
-### `TaskLedger`
+```sh
+PHOENIX_WORKING_DIR=.phoenix \
+PHOENIX_PORT=6007 \
+PHOENIX_GRPC_PORT=4318 \
+uv run phoenix serve
+```
 
-Estado compartido de la tarea. Guarda request original, resultados de
-subagentes, fuentes, archivos modificados y observaciones.
+```sh
+PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6007 \
+OBSERVABILITY=phoenix \
+uv run python scripts/analyze_repo.py
+```
 
-### `Subagent`
+Pruebas:
 
-Agente especializado con prompt, tools, permisos e iteration cap propios.
+- `docs/evidence/phoenix-trace-tree.png`
+- `docs/evidence/phoenix-llm-attributes.png`
+- `src/observability/phoenix.py`
 
-### `DelegatingActionPhase`
+### 13. Reflection - Cierre
 
-Fase que convierte una llamada del agente principal a un subagente en una
-ejecucion real y luego mezcla el reporte en el `TaskLedger`.
+Mensaje: el valor esta en la ingenieria del agente.
 
-### `RAG`
+Decir:
 
-Retrieval-Augmented Generation. En este proyecto se usa para consultar
-documentacion FastAPI antes de responder sobre convenciones del framework.
+- "Lo que funciono: loop propio, ledger immutable, policies, RAG y trazas
+  testeables."
+- "Lo no perfecto: modelos chicos pueden subdelegar de mas o llegar al
+  iteration cap."
+- "Mejoras: summarizer semantico, mejor auto-etiquetado de fuentes repo/web,
+  digest de memoria y un AwaitInput mas rico."
+- "La leccion: la coordinacion confiable debe estar en codigo, no en pedirle al
+  modelo que recuerde hacer todo bien."
 
-### `ProjectMemory`
+Pruebas:
 
-Memoria persistente por proyecto. Se carga al inicio de una ejecucion y se
-actualiza al final.
+- `docs/reflection.md`
+- `src/tests/`
 
-### `ToolExecutor`
-
-Punto unico de ejecucion de herramientas. Antes de invocar una tool consulta el
-`Approver`.
-
-### `PolicyVerifier`
-
-Valida reglas de seguridad: rutas prohibidas, comandos prohibidos, aprobaciones
-requeridas y confinamiento de workspace.
-
-### `EventBus`
-
-Canal de eventos del sistema. Permite progreso en CLI, auditoria y trazas
-OpenTelemetry/Phoenix.
-
-### `Scribe`
-
-Subagente que escribe documentacion. Es el unico con `write_file` y esta
-confinado al directorio de docs.
-
-## Preguntas probables del examen
+## Preguntas probables
 
 ### Por que no usar LangChain o LangGraph?
 
-Porque el requisito valoraba construir sobre el agente de clase y entender los
-mecanismos internos. Al no usar frameworks de orquestacion, el loop, la
-delegacion, las tools, la memoria y la observabilidad quedan visibles,
-testeables y explicables.
+Porque queriamos que el loop, la delegacion, las tools, la memoria y las trazas
+fueran visibles, explicables y testeables. El objetivo era construir el agente
+como infraestructura propia.
 
-### Como se diferencia este proyecto de un chatbot con tools?
+### Como se diferencia de un chatbot con tools?
 
-Tiene un harness completo: fases ReAct, estado compartido, politicas por tool,
-subagentes con permisos distintos, RAG con provenance, memoria persistente y
-observabilidad.
+Tiene fases explicitas, ledger compartido, subagentes con permisos distintos,
+RAG con provenance, memoria persistente, policies y observabilidad por eventos.
 
 ### Como funciona la delegacion?
 
-El principal no hace todo. Puede llamar subagentes como si fueran tools. La
-`DelegatingActionPhase` ejecuta el `Subagent`, recibe un `SubagentReport` y lo
-mezcla en el `TaskLedger`.
+El principal llama subagentes como tools. `DelegatingActionPhase` ejecuta el
+subagente, recibe un `SubagentReport` y lo integra al `TaskLedger`.
 
 ### Como se evita que un subagente haga algo peligroso?
 
-Cada tool call pasa por `ToolExecutor`, que consulta `Approver` y
-`PolicyVerifier`. Ademas cada subagente tiene un set limitado de tools. Por
-ejemplo, `Scribe` puede escribir, pero solo dentro de docs.
+Cada llamada pasa por `ToolExecutor`, que consulta `Approver` y
+`PolicyVerifier`. Ademas, cada subagente solo recibe las tools que necesita. El
+`Scribe` puede escribir, pero solo en docs.
 
 ### Para que sirve RAG aqui?
 
-Sirve para que el `Researcher` confirme convenciones FastAPI con documentos
-recuperados, no solo con conocimiento del modelo. Las fuentes recuperadas se
-registran como `Origin.RAG`.
+Para que el `Researcher` confirme convenciones FastAPI con documentacion
+recuperada. Las fuentes quedan registradas como `Origin.RAG`.
 
 ### Como funciona la memoria persistente?
 
-`ProjectMemoryService` carga memoria al inicio de la ejecucion y absorbe
-resultados del `TaskLedger` al final. La memoria se guarda por proyecto en JSON.
+`ProjectMemoryService` carga memoria al iniciar una ejecucion y absorbe
+resultados del ledger al final. El storage actual es JSON por proyecto.
 
-### Que captura la observabilidad?
+### Que captura Phoenix?
 
-Eventos de llamadas al modelo, tools, documentos recuperados, errores, guards,
-tokens, latencia, costo estimado y resultado final. Puede exportarse como spans
-OpenTelemetry.
+El root span `agent.run`, spans de cada llamada al modelo, spans de cada tool,
+tokens, latencia, costo, output, estado y `agent.name`. En la presentacion se
+ve una captura del arbol y otra de los atributos LLM.
+
+### Por que ahora Phoenix y no solo JSONL?
+
+El JSONL sigue siendo util como artifact headless, pero Phoenix permite navegar
+la traza, abrir spans y mostrar los atributos visualmente. El enfoque nuevo usa
+`PHOENIX_WORKING_DIR=.phoenix` para que la data sobreviva a reinicios del
+servidor.
 
 ### Cuales son las limitaciones honestas?
 
-- El manejo de contexto es estructural, no un resumen semantico.
-- La memoria persistente existe, pero la categorizacion todavia es gruesa.
-- Las fuentes RAG estan bien etiquetadas, pero repo/web no se auto-etiquetan al
-  mismo nivel.
-- Modelos pequenos pueden llegar al iteration cap; en ese caso se devuelven
-  hallazgos parciales.
+- El manejo de contexto es estructural, no un resumen semantico profundo.
+- La memoria persiste, pero su categorizacion es simple.
+- Repo/web sources no estan auto-etiquetadas con el mismo detalle que RAG.
+- Con modelos pequenos pueden aparecer partial findings por iteration cap.
 
 ## Ruta de demo sugerida
 
 Abrir en este orden:
 
 1. `docs/presentation.html`
-2. `docs/diagrams/ownership.svg`
-3. `src/harness/loop/agent_loop.py`
-4. `src/agent/team.py`
-5. `src/harness/runtime/ledger.py`
-6. `docs/evidence/task-evidence.md`
-7. `docs/evidence/analysis/sample_app/research.md`
-8. `docs/evidence/repo-analysis.otel.jsonl`
+2. `src/harness/loop/agent_loop.py`
+3. `src/agent/team.py`
+4. `src/harness/runtime/ledger.py`
+5. `src/observability/phoenix.py`
+6. `docs/evidence/phoenix-trace-tree.png`
+7. `docs/evidence/phoenix-llm-attributes.png`
+8. `docs/evidence/task-evidence.md`
 
-Si hay poco tiempo, mostrar solo:
+Si hay poco tiempo:
 
 1. La presentacion.
-2. `src/agent/team.py` para probar los subagentes.
+2. `src/agent/team.py` para probar subagentes.
 3. `src/harness/loop/agent_loop.py` para probar el loop.
-4. `docs/evidence/task-evidence.md` para probar que hubo ejecuciones reales.
-
-## Reparto sugerido para el equipo
-
-Persona 1:
-- Slides 1-2.
-- Explica objetivo, restricciones y caso de uso.
-
-Persona 2:
-- Slides 3-5.
-- Explica arquitectura, loop y runtime collaboration.
-
-Persona 3:
-- Slides 6-8.
-- Explica subagentes, RAG, memoria, seguridad y observabilidad.
-
-Persona 4:
-- Slides 9-10.
-- Explica evidencia, limitaciones y cierre.
+4. La slide de Phoenix para probar trazabilidad real.
 
 ## Checklist antes de presentar
 
-- Abrir `docs/presentation.html` en el navegador.
+- Abrir `docs/presentation.html`.
 - Probar flechas izquierda/derecha.
-- Tener listos los archivos de evidencia.
-- Saber explicar `AgentLoop`, `TaskLedger`, `ToolExecutor`, `RAG` y `Scribe`.
-- Recordar los numeros: 196 tests, 275 chunks, 59 spans, 47 model calls, 44
-  fuentes RAG, 7 entradas de memoria recordadas.
+- Probar zoom en las dos capturas Phoenix.
+- Tener listas las capturas:
+  - `docs/evidence/phoenix-trace-tree.png`
+  - `docs/evidence/phoenix-llm-attributes.png`
+- Recordar los numeros de la corrida Phoenix mostrada:
+  - Latencia aproximada: 2m 21s.
+  - Costo total aproximado: USD 0.01.
+  - Span LLM mostrado: 16,869 tokens.
+- Saber explicar `AgentLoop`, `TaskLedger`, `ToolExecutor`, `RAG`, `Scribe` y
+  `PhoenixTracer`.
 - No venderlo como perfecto: mencionar las limitaciones de `docs/reflection.md`.
