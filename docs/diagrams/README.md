@@ -1,12 +1,17 @@
 # Architecture diagrams
 
-Three PlantUML diagrams to onboard someone to the agent. Read them in order.
+PlantUML diagrams to onboard someone to the agent. Start with the overview for
+the whole picture, then read the rest in order for detail.
 
 | File | View | Question it answers |
 | --- | --- | --- |
+| [`overview.puml`](overview.puml) | **System overview (start here)** | Everything on one canvas: the layers, the loop, the subagent team, RAG/memory/observability, and the main flows between them. |
 | [`ownership.puml`](ownership.puml) | **Ownership / structure** | Who constructs and owns what? Where do dependencies come from? |
 | [`runtime-collaboration.puml`](runtime-collaboration.puml) | **Runtime collaboration** | Which objects send which messages during a turn? |
 | [`sequence.puml`](sequence.puml) | **Sequence** | Step by step, what happens in one ReAct turn that uses a tool? |
+
+For the per-package drill-down (each `src/` package's own README + a diagram at
+its abstraction level), start at [`../../src/README.md`](../../src/README.md).
 
 ## The 60-second mental model
 

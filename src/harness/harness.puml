@@ -1,0 +1,54 @@
+@startuml harness
+title harness — subpackages and their dependencies (inward-pointing)
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+legend left
+  ..> depends on (never the reverse)
+  assembly + Harness are composition roots
+endlegend
+
+package "llm (inner ring)" as LLM {
+}
+
+package harness {
+        package runtime {
+        }
+        package loop {
+        }
+        package tools {
+        }
+        package control {
+        }
+        package context {
+        }
+        package events {
+        }
+        package delegation {
+        }
+        class Harness <<single-shot root>>
+        class assembly <<wires the phase graph>>
+}
+
+runtime ..> LLM
+tools ..> LLM
+tools ..> runtime
+control ..> runtime
+context ..> LLM
+delegation ..> runtime
+loop ..> runtime
+loop ..> tools
+loop ..> control
+loop ..> context
+loop ..> events
+loop ..> delegation
+
+assembly ..> loop
+assembly ..> tools
+assembly ..> control
+assembly ..> delegation
+Harness ..> assembly
+
+@enduml

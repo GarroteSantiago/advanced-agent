@@ -1,0 +1,34 @@
+@startuml loop
+title harness.loop — the phase graph (Navigator's transition table)
+
+skinparam linetype ortho
+hide empty description
+
+[*] --> reason : start
+
+state reason
+state action
+state observation
+
+reason --> action : TOOLS_REQUESTED\n(Continue)
+reason --> [*] : ANSWERED -> Halt\n(context.stopped)
+action --> observation : ACTED\n(Continue)
+observation --> reason : CONTINUE\n(Continue)
+observation --> [*] : DENIED -> Halt\n(context.aborted)
+
+note right of reason
+  ReasonPhase: ask the ChatModel.
+  ContextManager windows history;
+  full context still folded in.
+end note
+note right of action
+  ActionPhase / DelegatingActionPhase:
+  run tools via ToolExecutor;
+  principal also routes subagent calls.
+end note
+note right of observation
+  ObservationPhase: Controller (hard deny)
+  then ProgressTracker (nudge-once / stall).
+end note
+
+@enduml

@@ -1,0 +1,66 @@
+@startuml llm
+title llm — value objects, ports, and provider adapters
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend left
+  *-- owns (composition)
+  ..|> implements (adapter -> port)
+  ..> depends on
+endlegend
+
+package "llm (domain)" {
+        enum Role
+        class Message {
+                +system() / user() / assistant() / tool()
+        }
+        class ToolCall
+        class TokenUsage {
+                +total(): int
+                +__add__(other): TokenUsage
+        }
+        class Completion {
+                +requests_tools(): bool
+        }
+        class Conversation {
+                +with_message(m): Conversation
+                +messages(): Sequence
+        }
+        class "ToolSchema\n<<type alias>>" as ToolSchema
+
+        interface ChatModel {
+                +identifier(): str
+                +complete(conv, tools): Completion
+        }
+        interface EmbeddingModel {
+                +identifier(): str
+                +embed(texts): list<vector>
+        }
+
+        class "estimate_cost()\n<<pricing>>" as Pricing
+}
+
+package "llm.providers (adapters, outer ring)" {
+        class OpenAIChatModel
+        class OpenAIEmbeddingModel
+        class PlaceholderChatModel
+}
+
+Message o-- Role
+Message o-- "*" ToolCall
+Completion o-- "*" ToolCall
+Completion o-- TokenUsage
+Conversation o-- "*" Message
+
+ChatModel ..> Conversation
+ChatModel ..> Completion
+ChatModel ..> ToolSchema
+Pricing ..> TokenUsage
+
+OpenAIChatModel ..|> ChatModel
+PlaceholderChatModel ..|> ChatModel
+OpenAIEmbeddingModel ..|> EmbeddingModel
+
+@enduml

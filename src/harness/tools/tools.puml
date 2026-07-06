@@ -1,0 +1,86 @@
+@startuml tools
+title harness.tools — the side-effect chokepoint
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend left
+  o-- holds (injected)
+  ..|> implements
+  ..> uses
+endlegend
+
+class ToolExecutor {
+        +execute(call): ToolResult
+        ' never raises on tool failure
+}
+
+class ToolRegistry {
+        +register/get/has/tools
+        +catalog(): ToolCatalog
+}
+class ToolCatalog {
+        +of_tools(ts)
+        +for_model(): [ToolSchema]
+}
+class ToolRequest
+class ToolResult {
+        +success() / failure()
+        +to_message(): Message
+        +modified : files
+}
+
+interface Describable {
+        +name / description
+        +parameters()
+}
+interface ToolInterface {
+        +mutates : bool
+        +invoke(req): ToolResult
+}
+
+interface Approver {
+        +review(req, mutating): Approval
+}
+class Approval {
+        +allow() / deny(reason)
+}
+class AutoApprover
+class SupervisionPolicy
+class CompositeApprover
+class PolicyVerifier
+class PolicyConfig
+
+package "adapters (outer ring)" {
+        class ReadFileTool
+        class ListFilesTool
+        class WriteFileTool
+        class RunCommandTool
+        class WebSearchTool
+}
+
+ToolInterface --|> Describable
+ToolExecutor o-- ToolRegistry
+ToolExecutor o-- Approver
+ToolExecutor ..> ToolResult
+ToolRegistry o-- "*" ToolInterface
+ToolRegistry ..> ToolCatalog
+ToolCatalog ..> Describable
+ToolExecutor ..> ToolRequest
+
+Approver ..> Approval
+AutoApprover ..|> Approver
+SupervisionPolicy ..|> Approver
+CompositeApprover ..|> Approver
+PolicyVerifier ..|> Approver
+CompositeApprover o-- "*" Approver
+PolicyVerifier o-- PolicyConfig
+
+ReadFileTool ..|> ToolInterface
+ListFilesTool ..|> ToolInterface
+WriteFileTool ..|> ToolInterface
+RunCommandTool ..|> ToolInterface
+WebSearchTool ..|> ToolInterface
+
+@enduml

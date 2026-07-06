@@ -1,0 +1,55 @@
+@startuml events
+title harness.events — one bus per agent, forwarded with provenance
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend left
+  o-- holds
+  ..|> implements
+  ..> publishes onto
+endlegend
+
+class Event {
+        +occurred_at
+        +source
+}
+note right of Event
+  subtypes: PhaseStarted/Completed,
+  ModelCalled/Completed, ToolInvoked/Observed,
+  DocumentsRetrieved, CycleCompleted,
+  LoopStopped, GuardTripped, StrategyNudged
+end note
+
+interface EventHandler {
+        +handle(event)
+}
+class EventBus {
+        +subscribe(h): Subscription
+        +publish(event)
+}
+class Subscription {
+        +cancel()  ' once
+}
+class AuditLogger {
+        +records()
+}
+class EventForwarder {
+        +handle(e): republish tagged
+}
+
+class "principal bus" as PBus
+class "subagent bus" as SBus
+
+EventBus ..> Event
+EventBus o-- "*" EventHandler
+EventBus ..> Subscription
+AuditLogger ..|> EventHandler
+EventForwarder ..|> EventHandler
+
+SBus o-- EventForwarder
+EventForwarder ..> PBus : replace(event, source=name)
+PBus o-- AuditLogger
+
+@enduml

@@ -1,0 +1,74 @@
+@startuml agent
+title agent — coordinator, subagent team, and the run-boundary Scribe
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend left
+  *-- owns
+  o-- holds (injected)
+  ..|> implements
+  ..> delegates / invokes
+endlegend
+
+class Session <<outer loop>> {
+        +ask(msg): ExecutionResult
+        ' one inner ReAct loop per turn
+}
+class PlanMode {
+        +negotiate() : approve/reject/revise
+}
+class ProgressView <<EventHandler>>
+interface Renderer
+interface Inputer
+
+class "SubagentRegistry\n(harness.delegation)" as Registry
+class Subagent {
+        +delegate(task): SubagentReport
+        +forward_events_to(bus)
+}
+class PartialSynthesizer
+class RagSearchTool
+class RetrievalLog
+
+class Documenter <<run boundary>> {
+        +document(ledger)
+}
+class Scribe <<Subagent, docs-confined>>
+
+package "the five delegatable roles" {
+        class explore
+        class research
+        class implement
+        class test
+        class review
+}
+
+Session o-- Registry
+Session o-- PlanMode
+Session *-- "1" ProgressView
+ProgressView o-- Renderer
+PlanMode o-- Inputer
+
+Registry o-- "5" Subagent
+explore ..|> Subagent
+research ..|> Subagent
+implement ..|> Subagent
+test ..|> Subagent
+review ..|> Subagent
+
+Subagent *-- PartialSynthesizer
+research o-- RagSearchTool
+RagSearchTool o-- RetrievalLog
+
+Documenter o-- Scribe
+Scribe ..|> Subagent
+Documenter ..> "reads whole ledger\nafter the run" Scribe
+
+note bottom of Scribe
+  Only writer; PolicyVerifier(workspace=docs_dir)
+  denies writes outside docs. NOT a mid-run delegate.
+end note
+
+@enduml

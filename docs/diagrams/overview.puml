@@ -1,0 +1,91 @@
+@startuml overview
+title Advanced Agent — system overview (everything on one canvas)
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+hide empty members
+left to right direction
+
+legend left
+  --> runtime flow / message
+  ..> injected dependency (port -> adapter)
+  Rings point inward: app -> harness -> llm.
+  main.py wires the adapters at the edge.
+endlegend
+
+actor User
+
+component "main.py\n<<composition root>>" as Main
+
+package "app layer (agent/)" {
+        component "CLI / Session\n(principal coordinator)" as Session
+        component "PlanMode\n(/plan)" as Plan
+        package "subagent team" {
+                component "explore" as Explore
+                component "research" as Research
+                component "implement" as Impl
+                component "test" as Test
+                component "review" as Review
+        }
+        component "Documenter -> Scribe\n(run-boundary writer,\ndocs-confined)" as Scribe
+        component "ProgressView" as Progress
+}
+
+package "harness (reusable core)" {
+        component "AgentLoop\nreason -> act -> observe\n(Navigator table)" as Loop
+        component "AgentExecutionContext\n+ TaskLedger\n(immutable shared state)" as Ledger
+        component "ToolExecutor\n(+ Approver / PolicyVerifier)\nsingle side-effect chokepoint" as Tools
+        component "Controller / ProgressTracker\n(limits + stall nudge)" as Control
+        component "ContextManager\n(windowing)" as Ctx
+        component "EventBus" as Bus
+        component "SubagentRegistry\n(delegation)" as Registry
+}
+
+package "services (ring 1)" {
+        component "RAG\nRetriever + VectorStore" as RAG
+        component "Memory\nProjectMemoryService" as Memory
+        component "Observability\nPhoenixTracer -> OTel" as Obs
+}
+
+package "llm (core)" {
+        component "ChatModel /\nEmbeddingModel\n(ports)" as LLM
+        component "OpenAI adapters" as OpenAI
+}
+
+' --- composition root injects adapters ---
+Main ..> Session
+Main ..> LLM
+Main ..> RAG
+Main ..> Memory
+Main ..> Obs
+
+' --- interactive flow ---
+User --> Session
+Session --> Plan
+Session --> Loop : one loop per turn
+Loop --> LLM : reason
+Loop --> Ledger : advances (copy-on-write)
+Loop --> Control : may continue?
+Loop --> Ctx : window history
+Loop --> Tools : run tool calls
+Loop --> Registry : delegate
+
+Registry --> Explore
+Registry --> Research
+Registry --> Impl
+Registry --> Test
+Registry --> Review
+Research --> RAG : rag_search (RAG-first)
+Explore --> Ledger : SubagentReport merges in
+
+' --- side channels ---
+LLM ..> OpenAI
+RAG ..> LLM : embed
+Session ..> Memory : brief before / absorb after
+Loop --> Bus : narrates
+Bus --> Progress
+Bus --> Obs
+Scribe --> Ledger : reads whole ledger after run
+
+@enduml

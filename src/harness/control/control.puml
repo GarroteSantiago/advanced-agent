@@ -1,0 +1,56 @@
+@startuml control
+title harness.control — hard limits (guards) vs graded stalls (tracker)
+
+skinparam linetype ortho
+hide empty methods
+
+legend left
+  o-- composes
+  ..|> implements
+  The tracker is NOT a Guard: its verdict is
+  three-valued so the loop can nudge before stopping.
+endlegend
+
+interface Guard {
+        +name
+        +evaluate(ctx): Decision
+}
+class Decision {
+        +allow() / deny(reason)
+        +denied(): bool
+}
+class Controller {
+        +permit(ctx): Decision
+        ' first denial wins (fail-closed)
+}
+class IterationLimiter {
+        +max_iterations
+}
+
+class ProgressTracker {
+        +stall_at = 2  ' -> nudge
+        +stop_at  = 3  ' -> halt
+        +assess(ctx): ProgressAssessment
+}
+enum Progress {
+        ADVANCING
+        STALLING
+        STALLED
+}
+class ProgressAssessment {
+        +advancing/stalling/stalled
+}
+
+Controller o-- "*" Guard
+IterationLimiter ..|> Guard
+Guard ..> Decision
+Controller ..> Decision
+ProgressTracker ..> ProgressAssessment
+ProgressAssessment o-- Progress
+
+note bottom of ProgressTracker
+  ObservationPhase asks the Controller first
+  (hard deny), then the tracker (nudge / stall).
+end note
+
+@enduml

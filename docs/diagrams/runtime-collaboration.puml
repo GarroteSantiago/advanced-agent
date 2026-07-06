@@ -1,59 +1,111 @@
 @startuml runtime-collaboration
-title Advanced Agent — Runtime Collaboration (messages during one turn)
+title Advanced Agent - Runtime Collaboration
 
+left to right direction
 skinparam linetype ortho
-hide empty members
+skinparam shadowing false
+skinparam wrapWidth 160
+skinparam maxMessageSize 18
+skinparam ArrowThickness 1
+skinparam defaultTextAlignment center
 
-legend left
-  Arrows are messages sent at runtime (not ownership).
-  The context is immutable: phases return a *new* context.
-endlegend
+skinparam rectangle {
+  BackgroundColor #F7F8FC
+  BorderColor #6B7280
+  RoundCorner 8
+}
 
-class Session
-class AgentLoop
-class Navigator
-class "AgentExecutionContext" as Context
-class ReasonPhase
-class ActionPhase
-class ObservationPhase
-interface ChatModel
-class ToolExecutor
-interface Approver
-interface ToolInterface
-class Controller
-class EventBus
-class ProgressView
-interface Renderer
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #CBD5E1
+}
 
-' driving the loop
-Session --> AgentLoop : run(context)
-AgentLoop --> ReasonPhase : run(context)
-AgentLoop --> ActionPhase : run(context)
-AgentLoop --> ObservationPhase : run(context)
-AgentLoop --> Navigator : next(phase, outcome)
-note right of Navigator
-  returns Continue(nextPhase)
-  or Halt (end the run)
+skinparam note {
+  BackgroundColor #FFF8D6
+  BorderColor #D1A02A
+  FontSize 12
+}
+
+rectangle "Session" as Session
+
+package "Loop core" {
+  rectangle "AgentLoop" as Loop
+  rectangle "Navigator" as Navigator
+  rectangle "ReasonPhase" as Reason
+  rectangle "ActionPhase" as Action
+  rectangle "ObservationPhase" as Observe
+  rectangle "Controller" as Controller
+}
+
+package "Runtime state" {
+  rectangle "AgentExecutionContext" as Context
+  rectangle "TaskLedger" as Ledger
+}
+
+package "External ports" {
+  rectangle "ChatModel" as Model
+  rectangle "ToolExecutor" as Executor
+  rectangle "Approver" as Approver
+  rectangle "ToolInterface" as Tool
+}
+
+package "Observability" {
+  rectangle "EventBus" as Bus
+  rectangle "ProgressView" as Progress
+  rectangle "Renderer" as Renderer
+}
+
+Session --> Loop : 1
+Loop --> Reason : 2
+Reason --> Model : 3
+Reason --> Context : 4
+Loop --> Navigator : 5
+Navigator --> Action : 6
+Action --> Executor : 7
+Executor --> Approver : 8a
+Executor --> Tool : 8b
+Action --> Context : 9
+Context --> Ledger : records
+Navigator --> Observe : 10
+Observe --> Controller : 11
+Observe --> Context : 12
+Navigator --> Reason : 13
+
+Reason ..> Bus : event
+Executor ..> Bus : event
+Observe ..> Bus : event
+Loop ..> Bus : event
+Bus --> Progress : 14
+Progress --> Renderer : 15
+
+note bottom of Loop
+  1 Session starts run(context)
+  2/6/10/13 selected phase runs
+  5 Navigator returns Continue or Halt
 end note
 
-' what each phase does
-ReasonPhase --> ChatModel : complete(conversation, tools)
-ReasonPhase --> Context : with_assistant(completion)
-ActionPhase --> ToolExecutor : execute(toolCall)
-ActionPhase --> Context : with_tool_results(results)
-ObservationPhase --> Context : observed()
-ObservationPhase --> Controller : permit(context)
+note bottom of Model
+  3 ChatModel.complete(...)
+  can return tool calls or final answer
+end note
 
-' tool execution chokepoint
-ToolExecutor --> Approver : review(request, mutating)
-ToolExecutor --> ToolInterface : invoke(request)
+note bottom of Executor
+  7 ToolExecutor.execute(call)
+  8a policy/approval review
+  8b tool adapter invocation
+end note
 
-' observability flows one way, off the bus
-ReasonPhase ..> EventBus : publish(ModelCalled)
-ToolExecutor ..> EventBus : publish(ToolInvoked / ToolObserved)
-ObservationPhase ..> EventBus : publish(CycleCompleted / GuardTripped)
-AgentLoop ..> EventBus : publish(PhaseStarted / LoopStopped)
-EventBus ..> ProgressView : handle(event)
-ProgressView ..> Renderer : show(text)
+note bottom of Context
+  4 with_assistant(...)
+  9 with_tool_results(...)
+  12 observed()
+  Context is immutable.
+end note
+
+note bottom of Bus
+  Events include ModelCalled,
+  ToolInvoked, ToolObserved,
+  CycleCompleted and LoopStopped.
+end note
 
 @enduml
